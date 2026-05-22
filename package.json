@@ -1,0 +1,20 @@
+{
+  "name": "parcelpal",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "api:dev": "npm --workspace packages/api run dev",
+    "admin:dev": "npm --workspace apps/admin run dev",
+    "web:dev": "npm --workspace apps/web run dev",
+    "agent-web:dev": "npm --workspace apps/agent-web run dev",
+    "migrate": "npm --workspace packages/api run migrate",
+    "seed": "npm --workspace packages/api run seed"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
