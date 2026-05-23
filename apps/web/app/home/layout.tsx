@@ -33,7 +33,9 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
     <div className="min-h-screen flex flex-col">
       <header className="border-b border-slate-200 bg-white sticky top-0 z-10">
         <div className="max-w-5xl mx-auto px-6 py-3 flex justify-between items-center">
-          <Link href="/home" className="font-bold text-xl">Parsalo</Link>
+          <Link href="/home" className="flex items-center">
+            <img src="/logo.png" alt="Parsalo" className="h-8 w-auto" />
+          </Link>
           <nav className="flex items-center gap-4">
             {links.map((l) => (
               <Link
