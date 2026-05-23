@@ -207,4 +207,28 @@ router.post('/online-status', requireAuth(['agent']), async (req, res) => {
   res.json({ ok: true });
 });
 
+// Job history — completed / cancelled / failed orders for the driver profile page
+router.get('/history', requireAuth(['agent']), async (req, res) => {
+  const agentId = (req.principal as any).agentId;
+  const limitRaw = Number(req.query.limit) || 50;
+  const offsetRaw = Number(req.query.offset) || 0;
+  const limit = Math.min(Math.max(1, limitRaw), 100);
+  const offset = Math.max(0, offsetRaw);
+
+  const { rows } = await query(
+    `${JOBS_SELECT}
+      WHERE o.agent_id = $1 AND o.status IN ('delivered', 'cancelled', 'failed')
+      ORDER BY o.updated_at DESC
+      LIMIT $2 OFFSET $3`,
+    [agentId, limit, offset],
+  );
+
+  const { rows: countRows } = await query<{ total: string }>(
+    `SELECT COUNT(*)::text AS total FROM orders WHERE agent_id = $1 AND status IN ('delivered', 'cancelled', 'failed')`,
+    [agentId],
+  );
+
+  res.json({ orders: rows, total: Number(countRows[0]?.total ?? 0) });
+});
+
 export default router;
