@@ -3,11 +3,11 @@ import type { ReactNode } from 'react';
 import PWA from '../components/PWA';
 
 export const metadata = {
-  title: 'ParcelPal',
+  title: 'Parsalo',
   description: 'Door-to-door courier assistant',
   manifest: '/manifest.webmanifest',
   themeColor: '#0E5BFF',
-  appleWebApp: { capable: true, statusBarStyle: 'default', title: 'ParcelPal' },
+  appleWebApp: { capable: true, statusBarStyle: 'default', title: 'Parsalo' },
 };
 
 export const viewport = {

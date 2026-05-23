@@ -11,7 +11,7 @@
     "rootDir": "src",
     "baseUrl": ".",
     "paths": {
-      "@parcelpal/shared": ["../shared/src/index.ts"]
+      "@parsalo/shared": ["../shared/src/index.ts"]
     }
   },
   "include": ["src/**/*"]

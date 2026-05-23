@@ -1,4 +1,4 @@
--- ParcelPal initial schema (per SPEC.md section 4)
+-- Parsalo initial schema (per SPEC.md section 4)
 
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 

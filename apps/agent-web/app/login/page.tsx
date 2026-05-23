@@ -33,7 +33,7 @@ export default function LoginPage() {
         <div className="text-center mb-6">
           <div className="text-4xl mb-2">🛵</div>
           <h1 className="text-xl font-bold">Agent sign in</h1>
-          <p className="text-sm text-slate-500 mt-1">ParcelPal delivery partner</p>
+          <p className="text-sm text-slate-500 mt-1">Parsalo delivery partner</p>
         </div>
         <form onSubmit={submit} className="space-y-3">
           <div>

@@ -3,8 +3,8 @@ import type { ReactNode } from 'react';
 import PWA from '../components/PWA';
 
 export const metadata = {
-  title: 'ParcelPal Agent',
-  description: 'Pickup and delivery for ParcelPal agents',
+  title: 'Parsalo Agent',
+  description: 'Pickup and delivery for Parsalo agents',
   manifest: '/manifest.webmanifest',
   themeColor: '#0E5BFF',
   appleWebApp: { capable: true, statusBarStyle: 'default', title: 'PP Agent' },

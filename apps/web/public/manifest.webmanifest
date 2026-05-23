@@ -1,6 +1,6 @@
 {
-  "name": "ParcelPal",
-  "short_name": "ParcelPal",
+  "name": "Parsalo",
+  "short_name": "Parsalo",
   "description": "Door-to-door courier assistant",
   "start_url": "/home",
   "display": "standalone",

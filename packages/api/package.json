@@ -1,5 +1,5 @@
 {
-  "name": "@parcelpal/api",
+  "name": "@parsalo/api",
   "version": "0.1.0",
   "private": true,
   "main": "src/index.ts",
@@ -11,7 +11,7 @@
     "seed": "tsx scripts/seed.ts"
   },
   "dependencies": {
-    "@parcelpal/shared": "*",
+    "@parsalo/shared": "*",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",

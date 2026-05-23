@@ -66,7 +66,7 @@ export default function LandingPage() {
     <div className="min-h-screen flex flex-col">
       <header className="border-b border-slate-200 bg-white">
         <div className="max-w-6xl mx-auto px-6 py-4 flex justify-between items-center">
-          <div className="font-bold text-xl">ParcelPal</div>
+          <div className="font-bold text-xl">Parsalo</div>
           <Link href="/" className="text-sm text-slate-600 hover:text-slate-900">Sign in</Link>
         </div>
       </header>
@@ -153,7 +153,7 @@ export default function LandingPage() {
       </main>
 
       <footer className="border-t border-slate-200 py-6 text-center text-sm text-slate-500">
-        ParcelPal · Thrissur, Kerala
+        Parsalo · Thrissur, Kerala
       </footer>
     </div>
   );

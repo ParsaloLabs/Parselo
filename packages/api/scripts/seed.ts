@@ -10,7 +10,7 @@ async function main() {
   await pool.query(sql);
 
   // Default admin
-  const adminEmail = process.env.SEED_ADMIN_EMAIL ?? 'admin@parcelpal.in';
+  const adminEmail = process.env.SEED_ADMIN_EMAIL ?? 'admin@parsalo.in';
   const adminPass = process.env.SEED_ADMIN_PASSWORD ?? 'admin1234';
   const adminHash = await bcrypt.hash(adminPass, 10);
   await pool.query(

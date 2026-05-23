@@ -16,7 +16,7 @@ const razorpay = env.RAZORPAY_KEY_ID && env.RAZORPAY_KEY_SECRET
 
 const DEV_MODE = !razorpay;
 
-// Create a Razorpay order against an existing ParcelPal order.
+// Create a Razorpay order against an existing Parsalo order.
 // Returns { key_id, razorpay_order_id, amount, currency, dev_mode }.
 router.post('/orders/:id/create', requireAuth(['user']), async (req, res) => {
   const userId = (req.principal as any).userId;
@@ -48,7 +48,7 @@ router.post('/orders/:id/create', requireAuth(['user']), async (req, res) => {
       amount: order.total_amount,
       currency: 'INR',
       receipt: order.order_code,
-      notes: { parcelpal_order_id: order.id, user_id: userId },
+      notes: { parsalo_order_id: order.id, user_id: userId },
     });
     await query(`UPDATE orders SET payment_id = $1, updated_at = NOW() WHERE id = $2`, [rp.id, order.id]);
     return res.json({
@@ -66,7 +66,7 @@ router.post('/orders/:id/create', requireAuth(['user']), async (req, res) => {
 
 // Verify the signature returned by Razorpay Checkout and mark the order paid.
 const verifySchema = z.object({
-  parcelpal_order_id: z.string().uuid(),
+  parsalo_order_id: z.string().uuid(),
   razorpay_order_id: z.string().optional(),
   razorpay_payment_id: z.string().optional(),
   razorpay_signature: z.string().optional(),
@@ -76,21 +76,21 @@ router.post('/verify', requireAuth(['user']), async (req, res) => {
   const userId = (req.principal as any).userId;
   const parsed = verifySchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: 'invalid_input' });
-  const { parcelpal_order_id, razorpay_order_id, razorpay_payment_id, razorpay_signature } = parsed.data;
+  const { parsalo_order_id, razorpay_order_id, razorpay_payment_id, razorpay_signature } = parsed.data;
 
   const { rows } = await query<{ id: string; payment_status: string }>(
     `SELECT id, payment_status FROM orders WHERE id = $1 AND user_id = $2`,
-    [parcelpal_order_id, userId],
+    [parsalo_order_id, userId],
   );
   if (rows.length === 0) return res.status(404).json({ error: 'not_found' });
 
   if (DEV_MODE) {
     await query(
       `UPDATE orders SET payment_status = 'paid', payment_id = 'dev_mock_payment', updated_at = NOW() WHERE id = $1`,
-      [parcelpal_order_id],
+      [parsalo_order_id],
     );
-    notifyOrderEvent(parcelpal_order_id, 'paid');
-    notifyAgentsNewJob(parcelpal_order_id);
+    notifyOrderEvent(parsalo_order_id, 'paid');
+    notifyAgentsNewJob(parsalo_order_id);
     return res.json({ ok: true, dev_mode: true });
   }
 
@@ -107,10 +107,10 @@ router.post('/verify', requireAuth(['user']), async (req, res) => {
 
   await query(
     `UPDATE orders SET payment_status = 'paid', payment_id = $1, updated_at = NOW() WHERE id = $2`,
-    [razorpay_payment_id, parcelpal_order_id],
+    [razorpay_payment_id, parsalo_order_id],
   );
-  notifyOrderEvent(parcelpal_order_id, 'paid');
-  notifyAgentsNewJob(parcelpal_order_id);
+  notifyOrderEvent(parsalo_order_id, 'paid');
+  notifyAgentsNewJob(parsalo_order_id);
   res.json({ ok: true });
 });
 
@@ -133,7 +133,7 @@ export const webhookHandler = [
 
     const event = payload.event;
     const entity = payload.payload?.payment?.entity ?? payload.payload?.order?.entity;
-    const ppOrderId = entity?.notes?.parcelpal_order_id;
+    const ppOrderId = entity?.notes?.parsalo_order_id;
     if (!ppOrderId) return res.json({ ok: true, ignored: true });
 
     if (event === 'payment.captured' || event === 'order.paid') {

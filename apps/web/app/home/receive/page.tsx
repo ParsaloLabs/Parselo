@@ -281,7 +281,7 @@ export default function ReceivePage() {
             <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)}
               className="mt-0.5" />
             <span>
-              I confirm the parcel belongs to me and authorize ParcelPal and its agent to collect it on
+              I confirm the parcel belongs to me and authorize Parsalo and its agent to collect it on
               my behalf, and I take responsibility for any claims arising from this collection.
             </span>
           </label>

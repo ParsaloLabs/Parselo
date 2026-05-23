@@ -1,4 +1,4 @@
-// ParcelPal service worker — minimal offline shell.
+// Parsalo service worker — minimal offline shell.
 // API calls go straight to the network so they never get stale.
 const CACHE = 'pp-web-v1';
 const SHELL = ['/', '/home', '/manifest.webmanifest'];

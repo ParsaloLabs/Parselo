@@ -36,7 +36,7 @@ export default function PayPage() {
     try {
       await api('/payments/verify', {
         method: 'POST',
-        body: { parcelpal_order_id: params.id },
+        body: { parsalo_order_id: params.id },
       });
       router.replace(`/home/orders/${params.id}`);
     } catch (e: any) {
@@ -53,14 +53,14 @@ export default function PayPage() {
       amount: info.amount,
       currency: info.currency,
       order_id: info.razorpay_order_id,
-      name: 'ParcelPal',
+      name: 'Parsalo',
       description: info.order_code,
       handler: async (resp: any) => {
         try {
           await api('/payments/verify', {
             method: 'POST',
             body: {
-              parcelpal_order_id: params.id,
+              parsalo_order_id: params.id,
               razorpay_order_id: resp.razorpay_order_id,
               razorpay_payment_id: resp.razorpay_payment_id,
               razorpay_signature: resp.razorpay_signature,

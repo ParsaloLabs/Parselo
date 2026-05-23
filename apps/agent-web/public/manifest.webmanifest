@@ -1,7 +1,7 @@
 {
-  "name": "ParcelPal Agent",
-  "short_name": "PP Agent",
-  "description": "Pickup and delivery for ParcelPal agents",
+  "name": "Parsalo Agent",
+  "short_name": "Parsalo Agent",
+  "description": "Pickup and delivery for Parsalo agents",
   "start_url": "/dashboard",
   "display": "standalone",
   "background_color": "#ffffff",

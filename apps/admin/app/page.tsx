@@ -5,7 +5,7 @@ import { api, setToken } from '../lib/api';
 
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState('admin@parcelpal.in');
+  const [email, setEmail] = useState('admin@parsalo.in');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -36,7 +36,7 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex items-center justify-center px-4">
       <form onSubmit={submit} className="w-full max-w-sm bg-white rounded-2xl shadow-sm p-8">
-        <h1 className="text-2xl font-bold mb-1">ParcelPal Admin</h1>
+        <h1 className="text-2xl font-bold mb-1">Parsalo Admin</h1>
         <p className="text-slate-500 text-sm mb-6">Sign in to operations dashboard</p>
         <label className="block text-sm font-medium mb-1">Email</label>
         <input

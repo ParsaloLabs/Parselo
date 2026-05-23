@@ -51,7 +51,7 @@ export async function buildAuthorizationPdf(input: AuthDocInput): Promise<Buffer
     year: 'numeric', month: 'long', day: 'numeric',
   });
 
-  doc.fontSize(10).fillColor('#666').text('ParcelPal — Thrissur', 50, 50);
+  doc.fontSize(10).fillColor('#666').text('Parsalo — Thrissur', 50, 50);
   doc.text(today, 50, 50, { align: 'right' });
 
   doc.moveDown(2);
@@ -60,7 +60,7 @@ export async function buildAuthorizationPdf(input: AuthDocInput): Promise<Buffer
   doc.moveDown(1.5);
 
   doc.fontSize(11).fillColor('#000').text(
-    'I, the undersigned, hereby authorize ParcelPal Pvt. Ltd. and its designated delivery agent ' +
+    'I, the undersigned, hereby authorize Parsalo Pvt. Ltd. and its designated delivery agent ' +
     'to collect the parcel described below from the courier office on my behalf, and to deliver it ' +
     'to the address specified.',
     { align: 'justify' },
@@ -115,7 +115,7 @@ export async function buildAuthorizationPdf(input: AuthDocInput): Promise<Buffer
   doc.text('Government-issued ID', col2X, lineY + 5, { width: colWidth });
 
   doc.fontSize(8).fillColor('#999').text(
-    `Issued by ParcelPal · ${new Date(input.order.created_at).toLocaleString('en-IN')} · ID ${input.order.id}`,
+    `Issued by Parsalo · ${new Date(input.order.created_at).toLocaleString('en-IN')} · ID ${input.order.id}`,
     50, doc.page.height - 60,
     { align: 'center', width: doc.page.width - 100 },
   );

@@ -67,30 +67,30 @@ function customerMessage(o: OrderRow, event: OrderEvent): string | null {
   const code = o.order_code;
   switch (event) {
     case 'paid':
-      return `ParcelPal: ${code} booked. We're finding an agent. Track at parcelpal.in`;
+      return `Parsalo: ${code} booked. We're finding an agent. Track at parsalo.in`;
     case 'agent_assigned':
-      return `ParcelPal: ${o.agent_name ?? 'Agent'} (${o.agent_phone ?? '—'}) is assigned to ${code}. ` +
+      return `Parsalo: ${o.agent_name ?? 'Agent'} (${o.agent_phone ?? '—'}) is assigned to ${code}. ` +
         (o.order_type === RECEIVE
           ? `They'll pick up your parcel from the courier office.`
           : `Keep your parcel + OTP ${o.delivery_otp} ready for pickup.`);
     case 'agent_en_route_pickup':
-      return `ParcelPal: Agent on the way for ${code}. ` +
+      return `Parsalo: Agent on the way for ${code}. ` +
         (o.order_type === RECEIVE ? `Heading to the courier office.` : `Share OTP ${o.delivery_otp} at pickup.`);
     case 'parcel_collected':
-      return `ParcelPal: Parcel collected for ${code}. ` +
+      return `Parsalo: Parcel collected for ${code}. ` +
         (o.order_type === RECEIVE ? `Heading to your address now.` : `It's on the way to the courier office.`);
     case 'out_for_delivery':
       return o.order_type === RECEIVE
-        ? `ParcelPal: Agent is on the way to deliver ${code}. Share OTP ${o.delivery_otp} at handover.`
-        : `ParcelPal: ${code} is on the way to the courier office.`;
+        ? `Parsalo: Agent is on the way to deliver ${code}. Share OTP ${o.delivery_otp} at handover.`
+        : `Parsalo: ${code} is on the way to the courier office.`;
     case 'delivered':
       return o.order_type === RECEIVE
-        ? `ParcelPal: ${code} delivered. Hope to serve you again!`
-        : `ParcelPal: ${code} dropped at the courier office. Tracking ID will follow on courier SMS.`;
+        ? `Parsalo: ${code} delivered. Hope to serve you again!`
+        : `Parsalo: ${code} dropped at the courier office. Tracking ID will follow on courier SMS.`;
     case 'cancelled':
-      return `ParcelPal: ${code} was cancelled. Refund (if applicable) is processing.`;
+      return `Parsalo: ${code} was cancelled. Refund (if applicable) is processing.`;
     case 'failed':
-      return `ParcelPal: ${code} could not be completed. Open the app to retry today, retry tomorrow, or request a refund.`;
+      return `Parsalo: ${code} could not be completed. Open the app to retry today, retry tomorrow, or request a refund.`;
     default:
       return null;
   }
@@ -98,7 +98,7 @@ function customerMessage(o: OrderRow, event: OrderEvent): string | null {
 
 function agentMessage(o: OrderRow, event: OrderEvent): string | null {
   if (event === 'agent_assigned') {
-    return `ParcelPal: You're assigned to ${o.order_code} (${o.order_type}). Open the agent app for details.`;
+    return `Parsalo: You're assigned to ${o.order_code} (${o.order_type}). Open the agent app for details.`;
   }
   return null;
 }
@@ -128,7 +128,7 @@ export async function notifyAgentsNewJob(orderId: string) {
     const { rows: agents } = await query<{ phone: string }>(
       `SELECT phone FROM agents WHERE is_online = TRUE AND is_active = TRUE`,
     );
-    const msg = `ParcelPal: New ${o.order_type} job ${o.order_code} available. Open the app to accept.`;
+    const msg = `Parsalo: New ${o.order_type} job ${o.order_code} available. Open the app to accept.`;
     await Promise.all(agents.map((a) => sendSms(a.phone, msg)));
   } catch (e) {
     console.warn('[notify:broadcast] failed', e);
