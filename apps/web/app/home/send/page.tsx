@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { api } from '../../../lib/api';
+import MapPicker, { PickedLocation } from '../../../components/MapPicker';
 
 type Address = {
   id: string; label?: string | null; full_address: string;
@@ -24,6 +25,8 @@ export default function SendPage() {
   const [addresses, setAddresses] = useState<Address[]>([]);
   const [pickupId, setPickupId] = useState<string>('');
   const [newPickup, setNewPickup] = useState({ full_address: '', pincode: '' });
+  const [pickupPin, setPickupPin] = useState<PickedLocation | null>(null);
+  const [deliveryPin, setDeliveryPin] = useState<PickedLocation | null>(null);
 
   const [parcelType, setParcelType] = useState('Documents');
   const [weight, setWeight] = useState('1');
@@ -53,12 +56,17 @@ export default function SendPage() {
     try {
       let pickup = addresses.find((a) => a.id === pickupId);
       if (!pickup) {
-        if (!newPickup.full_address) throw new Error('Add a pickup address');
+        if (!pickupPin) throw new Error('Pinpoint the pickup location on the map');
+        const fullAddress = newPickup.full_address || pickupPin.full_address;
+        if (!fullAddress) throw new Error('Add a pickup address');
+        const pin = newPickup.pincode || pickupPin.pincode;
         const created = await api<Address>('/addresses', {
           method: 'POST',
           body: {
-            full_address: newPickup.full_address,
-            pincode: newPickup.pincode || undefined,
+            full_address: fullAddress,
+            latitude: pickupPin.lat,
+            longitude: pickupPin.lng,
+            pincode: pin || undefined,
             is_default: addresses.length === 0,
           },
         });
@@ -66,8 +74,9 @@ export default function SendPage() {
         setPickupId(created.id);
         pickup = created;
       }
-      const fromPin = pickup.pincode || newPickup.pincode || '680001';
-      const toPin = deliveryPincode || '110001';
+      if (!deliveryPin) throw new Error('Pinpoint the delivery location on the map');
+      const fromPin = pickup.pincode || newPickup.pincode || pickupPin?.pincode || '680001';
+      const toPin = deliveryPincode || deliveryPin.pincode || '110001';
       const res = await api<{ quotes: Quote[] }>('/quotes', {
         method: 'POST',
         body: {
@@ -104,6 +113,8 @@ export default function SendPage() {
           recipient_name: recipientName,
           recipient_phone: recipientPhone,
           delivery_address: deliveryAddress,
+          delivery_lat: deliveryPin?.lat,
+          delivery_lng: deliveryPin?.lng,
           selected_courier_id: selectedQuote.courier_id,
           courier_charge_paise: selectedQuote.price_paise,
         },
@@ -167,11 +178,22 @@ export default function SendPage() {
               </div>
             )}
             {pickupId === '' && (
-              <div className="space-y-2">
+              <div className="space-y-3">
+                <MapPicker
+                  label="Pin the pickup spot"
+                  value={pickupPin}
+                  onChange={(loc) => {
+                    setPickupPin(loc);
+                    setNewPickup((p) => ({
+                      full_address: p.full_address || loc.full_address,
+                      pincode: p.pincode || loc.pincode,
+                    }));
+                  }}
+                />
                 <textarea
                   value={newPickup.full_address}
                   onChange={(e) => setNewPickup({ ...newPickup, full_address: e.target.value })}
-                  placeholder="House/flat, street, area, city"
+                  placeholder="House/flat, street, area (refine the auto-filled address)"
                   className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" rows={2} required
                 />
                 <input
@@ -225,6 +247,16 @@ export default function SendPage() {
                 placeholder="+91XXXXXXXXXX" required
                 className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" />
             </div>
+            <MapPicker
+              label="Pin the delivery spot"
+              accentClass="#F59E0B"
+              value={deliveryPin}
+              onChange={(loc) => {
+                setDeliveryPin(loc);
+                if (!deliveryAddress) setDeliveryAddress(loc.full_address);
+                if (!deliveryPincode) setDeliveryPincode(loc.pincode);
+              }}
+            />
             <textarea value={deliveryAddress} onChange={(e) => setDeliveryAddress(e.target.value)}
               placeholder="Delivery address (house/flat, street, area, city)" rows={2} required
               className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" />

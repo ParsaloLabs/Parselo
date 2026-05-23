@@ -19,6 +19,8 @@ const sendSchema = z.object({
   recipient_name: z.string().min(1),
   recipient_phone: z.string().min(10),
   delivery_address: z.string().min(5),
+  delivery_lat: z.number().optional(),
+  delivery_lng: z.number().optional(),
   selected_courier_id: z.string().uuid(),
   courier_charge_paise: z.number().int().nonnegative(),
   scheduled_pickup_at: z.string().datetime().optional(),
@@ -56,14 +58,16 @@ router.post('/', requireAuth(['user']), async (req, res) => {
       `INSERT INTO orders (
          order_code, user_id, order_type, parcel_type, parcel_weight_kg, parcel_description,
          declared_value, pickup_address_id, recipient_name, recipient_phone, delivery_address,
+         delivery_lat, delivery_lng,
          selected_courier_id, scheduled_pickup_at,
          courier_charge, service_fee, gst_amount, total_amount, delivery_otp
-       ) VALUES ($1,$2,'send',$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)
+       ) VALUES ($1,$2,'send',$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19)
        RETURNING *`,
       [
         code, userId, d.parcel_type, d.parcel_weight_kg, d.parcel_description ?? null,
         d.declared_value ?? null, d.pickup_address_id, d.recipient_name, d.recipient_phone,
-        d.delivery_address, d.selected_courier_id, d.scheduled_pickup_at ?? null,
+        d.delivery_address, d.delivery_lat ?? null, d.delivery_lng ?? null,
+        d.selected_courier_id, d.scheduled_pickup_at ?? null,
         price.courier_charge, price.service_fee, price.gst_amount, price.total, otp,
       ],
     );
