@@ -6,6 +6,41 @@ import { notifyOrderEvent } from '../notifications';
 
 const router = Router();
 
+router.get('/me', requireAuth(['agent']), async (req, res) => {
+  const agentId = (req.principal as any).agentId;
+  const { rows } = await query(
+    `SELECT id, phone, full_name, email, vehicle_type, vehicle_number, rating, total_deliveries, is_online FROM agents WHERE id = $1`,
+    [agentId],
+  );
+  if (rows.length === 0) return res.status(404).json({ error: 'not_found' });
+  res.json(rows[0]);
+});
+
+router.get('/profits', requireAuth(['agent']), async (req, res) => {
+  const agentId = (req.principal as any).agentId;
+  const { rows } = await query<{ date: string; amount: number }>(
+    `SELECT 
+       TO_CHAR(COALESCE(delivery_completed_at, created_at), 'YYYY-MM-DD') as date,
+       SUM(COALESCE(service_fee, 4000)) as amount
+     FROM orders 
+     WHERE agent_id = $1 AND status = 'delivered'
+     GROUP BY date
+     ORDER BY date DESC`,
+    [agentId],
+  );
+
+  const dailyProfits: Record<string, number> = {};
+  let totalProfits = 0;
+
+  rows.forEach((row) => {
+    const valINR = Math.round(Number(row.amount) / 100);
+    dailyProfits[row.date] = valINR;
+    totalProfits += valINR;
+  });
+
+  res.json({ totalProfits, dailyProfits });
+});
+
 // Surface unified pickup/drop coordinates per order so the agent app
 // can render both on one map regardless of order_type.
 //   send:    pickup = pickup_address (addresses table)

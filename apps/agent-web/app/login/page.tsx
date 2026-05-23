@@ -31,7 +31,7 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center px-6">
       <div className="w-full max-w-sm bg-white border border-slate-200 rounded-2xl shadow-lg p-8">
         <div className="text-center mb-6">
-          <img src="/logo.png" alt="Parsalo" className="h-16 w-auto mx-auto mb-3" />
+          <img src="/logo.png" alt="Parsalo" className="h-28 w-28 mx-auto mb-3" style={{ height: '112px', width: '112px', minWidth: '112px', maxWidth: '112px' }} />
           <h1 className="text-xl font-bold">Agent sign in</h1>
           <p className="text-sm text-slate-500 mt-1">Parsalo delivery partner</p>
         </div>

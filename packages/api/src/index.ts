@@ -20,6 +20,13 @@ app.post('/api/v1/payments/webhook', ...webhookHandler);
 
 app.use(express.json({ limit: '2mb' }));
 
+app.get('/', (_req, res) => res.json({
+  message: 'Welcome to the Parsalo API',
+  version: '0.1.0',
+  health: '/health',
+  endpoints: '/api/v1'
+}));
+
 app.get('/health', (_req, res) => res.json({ ok: true }));
 
 app.use('/api/v1/auth', authRouter);

@@ -66,7 +66,7 @@ export default function LandingPage() {
     <div className="min-h-screen flex flex-col">
       <header className="border-b border-slate-200 bg-white">
         <div className="max-w-6xl mx-auto px-6 py-4 flex justify-between items-center">
-          <img src="/logo.png" alt="Parsalo" className="h-9 w-auto" />
+          <img src="/logo.png" alt="Parsalo" className="h-16 w-16" style={{ height: '64px', width: '64px', minWidth: '64px', maxWidth: '64px' }} />
           <Link href="/" className="text-sm text-slate-600 hover:text-slate-900">Sign in</Link>
         </div>
       </header>
