@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { api } from '../../../lib/api';
 import SignaturePad, { SignaturePadHandle } from '../../../components/SignaturePad';
+import MapPicker, { PickedLocation } from '../../../components/MapPicker';
 
 async function compressImage(file: File, maxDim = 1200, quality = 0.75): Promise<string> {
   const url = URL.createObjectURL(file);
@@ -49,6 +50,7 @@ export default function ReceivePage() {
   const [trackingId, setTrackingId] = useState('');
   const [deliveryId, setDeliveryId] = useState('');
   const [newDelivery, setNewDelivery] = useState({ full_address: '', pincode: '' });
+  const [deliveryPin, setDeliveryPin] = useState<PickedLocation | null>(null);
   const [sameDay, setSameDay] = useState(false);
 
   const sigRef = useRef<SignaturePadHandle>(null);
@@ -96,12 +98,17 @@ export default function ReceivePage() {
     try {
       let delId = deliveryId;
       if (!delId) {
-        if (!newDelivery.full_address) throw new Error('Add a delivery address');
+        if (!deliveryPin) throw new Error('Pinpoint the delivery location on the map');
+        const fullAddress = newDelivery.full_address || deliveryPin.full_address;
+        if (!fullAddress) throw new Error('Add a delivery address');
+        const pin = newDelivery.pincode || deliveryPin.pincode;
         const created = await api<Address>('/addresses', {
           method: 'POST',
           body: {
-            full_address: newDelivery.full_address,
-            pincode: newDelivery.pincode || undefined,
+            full_address: fullAddress,
+            latitude: deliveryPin.lat,
+            longitude: deliveryPin.lng,
+            pincode: pin || undefined,
             is_default: addresses.length === 0,
           },
         });
@@ -204,11 +211,23 @@ export default function ReceivePage() {
             </div>
           )}
           {deliveryId === '' && (
-            <div className="space-y-2">
+            <div className="space-y-3">
+              <MapPicker
+                label="Pin the delivery spot"
+                accentClass="#F59E0B"
+                value={deliveryPin}
+                onChange={(loc) => {
+                  setDeliveryPin(loc);
+                  setNewDelivery((d) => ({
+                    full_address: d.full_address || loc.full_address,
+                    pincode: d.pincode || loc.pincode,
+                  }));
+                }}
+              />
               <textarea
                 value={newDelivery.full_address}
                 onChange={(e) => setNewDelivery({ ...newDelivery, full_address: e.target.value })}
-                placeholder="House/flat, street, area, city" rows={2} required
+                placeholder="House/flat, street, area (refine the auto-filled address)" rows={2} required
                 className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm"
               />
               <input

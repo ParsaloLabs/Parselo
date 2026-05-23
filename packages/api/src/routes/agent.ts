@@ -41,10 +41,32 @@ router.get('/profits', requireAuth(['agent']), async (req, res) => {
   res.json({ totalProfits, dailyProfits });
 });
 
+// Surface unified pickup/drop coordinates per order so the agent app
+// can render both on one map regardless of order_type.
+//   send:    pickup = pickup_address (addresses table)
+//            drop   = orders.delivery_lat/lng + orders.delivery_address (free text)
+//   receive: pickup = source courier branch (courier_branches)
+//            drop   = delivery_address (addresses table)
+const JOBS_SELECT = `
+  SELECT o.*,
+         COALESCE(pa.latitude, cb.latitude)                AS pickup_lat,
+         COALESCE(pa.longitude, cb.longitude)              AS pickup_lng,
+         COALESCE(pa.full_address, cb.full_address)        AS pickup_text,
+         COALESCE(da.latitude, o.delivery_lat)             AS drop_lat,
+         COALESCE(da.longitude, o.delivery_lng)            AS drop_lng,
+         COALESCE(da.full_address, o.delivery_address)     AS drop_text
+    FROM orders o
+    LEFT JOIN addresses pa ON pa.id = o.pickup_address_id
+    LEFT JOIN addresses da ON da.id = o.delivery_address_id
+    LEFT JOIN courier_branches cb ON cb.id = o.source_branch_id
+`;
+
 router.get('/jobs', requireAuth(['agent']), async (req, res) => {
   const agentId = (req.principal as any).agentId;
   const { rows: assigned } = await query(
-    `SELECT * FROM orders WHERE agent_id = $1 AND status NOT IN ('delivered','cancelled','failed') ORDER BY created_at DESC`,
+    `${JOBS_SELECT}
+      WHERE o.agent_id = $1 AND o.status NOT IN ('delivered','cancelled','failed')
+      ORDER BY o.created_at DESC`,
     [agentId],
   );
 
@@ -56,10 +78,10 @@ router.get('/jobs', requireAuth(['agent']), async (req, res) => {
 
   const available = isOnline
     ? (await query(
-        `SELECT * FROM orders
-           WHERE agent_id IS NULL AND status = 'pending' AND payment_status = 'paid'
-             AND (retry_at IS NULL OR retry_at <= NOW())
-           ORDER BY created_at ASC LIMIT 20`,
+        `${JOBS_SELECT}
+          WHERE o.agent_id IS NULL AND o.status = 'pending' AND o.payment_status = 'paid'
+            AND (o.retry_at IS NULL OR o.retry_at <= NOW())
+          ORDER BY o.created_at ASC LIMIT 20`,
       )).rows
     : [];
 

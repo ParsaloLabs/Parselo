@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { api, downloadFile, STATUS_LABEL } from '../../../lib/api';
+import JobMap from '../../../components/JobMap';
 
 type Order = {
   id: string; order_code: string; order_type: 'send' | 'receive'; status: string;
@@ -12,7 +13,20 @@ type Order = {
   pickup_address_id?: string | null;
   courier_tracking_id?: string | null;
   total_amount: number;
+  pickup_lat?: number | string | null;
+  pickup_lng?: number | string | null;
+  pickup_text?: string | null;
+  drop_lat?: number | string | null;
+  drop_lng?: number | string | null;
+  drop_text?: string | null;
 };
+
+const PICKED_STATUSES = new Set(['parcel_collected', 'at_courier_office', 'out_for_delivery']);
+function toNum(v: number | string | null | undefined): number | null {
+  if (v === null || v === undefined || v === '') return null;
+  const n = typeof v === 'number' ? v : Number(v);
+  return Number.isFinite(n) ? n : null;
+}
 
 function nextStepsFor(orderType: 'send' | 'receive', status: string): { label: string; status: string }[] {
   const dropLabel = orderType === 'send' ? 'Drop at courier office' : 'Hand over to customer';
@@ -123,6 +137,20 @@ export default function JobPage() {
           </span>
         </div>
       </div>
+
+      <JobMap
+        pickup={{
+          lat: toNum(order.pickup_lat),
+          lng: toNum(order.pickup_lng),
+          label: order.pickup_text ?? 'Pickup',
+        }}
+        drop={{
+          lat: toNum(order.drop_lat),
+          lng: toNum(order.drop_lng),
+          label: order.drop_text ?? 'Drop',
+        }}
+        activeLeg={PICKED_STATUSES.has(order.status) ? 'drop' : 'pickup'}
+      />
 
       {order.order_type === 'send' && order.recipient_name && (
         <div className="bg-white border border-slate-200 rounded-xl p-5 mb-4 text-sm">
