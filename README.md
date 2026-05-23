@@ -6,7 +6,15 @@
 | Agent web     | `npm run agent-web:dev` | http://localhost:3002   |
 
 <br>
+
+ **Admin** (admin dashboard): `admin@parcelpal.in` / `admin1234`
+- **Test agent** (agent web): `+919999999999` / `agent1234`
+- **Customer OTP** (dev mode): any phone, OTP is always `123456`
+  
 <br>
+
+
+
 <img width="642" height="628" alt="Screenshot 2026-05-23 at 12 30 58 AM" src="https://github.com/user-attachments/assets/35eb9d73-01b2-430b-8929-71ed82542219" />
 
 
