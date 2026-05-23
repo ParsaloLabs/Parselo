@@ -1103,7 +1103,10 @@
        ------------------------------------------------------------- -->
   <script>
     // 1. Dynamic Year
-    document.getElementById('year').textConten    const postersData = [
+    document.getElementById('year').textContent = new Date().getFullYear();
+
+    // 2. Poster Campaign Data
+    const postersData = [
       {
         src: 'assets/posters/poster-reliable-delivery.jpg',
         category: 'Overview Slogan',
@@ -1257,12 +1260,6 @@
       detailsDescription.textContent = currentData.description;
 
       const customText = encodeURIComponent(`Hi Parsalo, I saw your "${currentData.title}" campaign and I want to enquire about doorstep delivery services in Thrissur!`);
-      actionWhatsappBtn.onclick = () => {
-        window.open(`https://wa.me/919037407267?text=${customText}`, '_blank');
-      };
-
-      buildTabs();
-    }nd I want to enquire about doorstep delivery services in Thrissur!`);
       actionWhatsappBtn.onclick = () => {
         window.open(`https://wa.me/919037407267?text=${customText}`, '_blank');
       };
