@@ -1103,15 +1103,12 @@
        ------------------------------------------------------------- -->
   <script>
     // 1. Dynamic Year
-    document.getElementById('year').textContent = new Date().getFullYear();
-
-    // 2. Poster Campaign Data
-    const postersData = [
+    document.getElementById('year').textConten    const postersData = [
       {
         src: 'assets/posters/poster-reliable-delivery.jpg',
-        lang: 'English',
         category: 'Overview Slogan',
         title: 'Reliable Door-to-Door Delivery',
+        shortTitle: 'Reliable Delivery',
         quote: 'Reliable door to door delivery',
         quoteLang: 'en',
         translation: 'Core Service Standard',
@@ -1119,21 +1116,10 @@
         themeColor: 'var(--accent-orange)'
       },
       {
-        src: 'assets/posters/poster-chalo-parsalo.jpg',
-        lang: 'Hindi',
-        category: 'Slogan Slogan',
-        title: 'Chalo Parsalo Karo!',
-        quote: 'चलो parsalo करो',
-        quoteLang: 'hi',
-        translation: 'Aapka parcel. Humari zimmedari. Doorstep se doorstep.',
-        description: 'Our absolute promise to customers in North and South alike. We shoulder the full stress of transit. Once you hand it to us, doorstep-to-doorstep coordination is completely our responsibility.',
-        themeColor: 'var(--accent-orange)'
-      },
-      {
         src: 'assets/posters/poster-hand-to-hand.jpg',
-        lang: 'Malayalam',
         category: 'Core Process',
         title: 'Hand to Hand Relay Process',
+        shortTitle: 'Hand-to-Hand Relay',
         quote: 'കയ്യിൽ നിന്ന് കയ്യിലേക്ക്',
         quoteLang: 'ml',
         translation: 'From hand to hand, doorstep to doorstep. Relaying parcels made easy.',
@@ -1142,9 +1128,9 @@
       },
       {
         src: 'assets/posters/poster-auto-delivery.jpg',
-        lang: 'Malayalam',
         category: 'Zero Effort',
         title: 'No Need to Step Out',
+        shortTitle: 'No Need to Step Out',
         quote: 'പാഴ്സൽ എത്തും. നിങ്ങൾ ഇറങ്ങേണ്ട.',
         quoteLang: 'ml',
         translation: 'Your parcel will arrive safely. You do not need to leave your home.',
@@ -1153,9 +1139,9 @@
       },
       {
         src: 'assets/posters/poster-rain-delivery.jpg',
-        lang: 'Malayalam',
         category: 'Reliability',
         title: 'Monsoon or Shine, We Deliver',
+        shortTitle: 'Rain or Shine',
         quote: 'മഴയുണ്ടെങ്കിലും, പാർസൽ എത്തും.',
         quoteLang: 'ml',
         translation: 'Even if it pours with heavy rain, your parcel will reach its destination.',
@@ -1174,7 +1160,6 @@
     
     const detailsBadge = document.getElementById('details-badge');
     const detailsTitle = document.getElementById('details-title');
-    const quoteLabelLang = document.getElementById('quote-label-lang');
     const quoteText = document.getElementById('quote-text');
     const quoteTranslation = document.getElementById('quote-translation');
     const detailsDescription = document.getElementById('details-description');
@@ -1201,8 +1186,7 @@
         btn.innerHTML = `
           <img src="${poster.src}" class="tab-btn-thumb" alt="Thumbnail" />
           <div class="tab-btn-info">
-            <span class="tab-btn-lang">${poster.lang}</span>
-            <span class="tab-btn-title">${poster.title.split(' ')[0]} ${poster.title.split(' ')[1] || ''}</span>
+            <span class="tab-btn-title">${poster.shortTitle}</span>
           </div>
         `;
         
@@ -1242,7 +1226,6 @@
         detailsBadge.style.backgroundColor = currentData.themeColor;
         detailsTitle.textContent = currentData.title;
         
-        quoteLabelLang.textContent = `Original Slogan (${currentData.lang})`;
         quoteText.textContent = currentData.quote;
         quoteTranslation.textContent = currentData.translation;
         detailsDescription.textContent = currentData.description;
@@ -1269,12 +1252,17 @@
       detailsBadge.textContent = currentData.category;
       detailsBadge.style.backgroundColor = currentData.themeColor;
       detailsTitle.textContent = currentData.title;
-      quoteLabelLang.textContent = `Original Slogan (${currentData.lang})`;
       quoteText.textContent = currentData.quote;
       quoteTranslation.textContent = currentData.translation;
       detailsDescription.textContent = currentData.description;
 
       const customText = encodeURIComponent(`Hi Parsalo, I saw your "${currentData.title}" campaign and I want to enquire about doorstep delivery services in Thrissur!`);
+      actionWhatsappBtn.onclick = () => {
+        window.open(`https://wa.me/919037407267?text=${customText}`, '_blank');
+      };
+
+      buildTabs();
+    }nd I want to enquire about doorstep delivery services in Thrissur!`);
       actionWhatsappBtn.onclick = () => {
         window.open(`https://wa.me/919037407267?text=${customText}`, '_blank');
       };
