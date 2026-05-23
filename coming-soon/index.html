@@ -284,87 +284,29 @@
       margin-top: 4px;
     }
 
-    /* Interactive Horizontal Tabs */
-    .showcase-tabs {
+    /* Slideshow Navigation Dots */
+    .showcase-dots {
       display: flex;
+      justify-content: center;
       gap: 12px;
-      overflow-x: auto;
-      padding: 4px 4px 16px 4px;
       margin-bottom: 36px;
-      scroll-snap-type: x mandatory;
-      scrollbar-width: none; /* Hide scrollbar for clean aesthetics */
     }
 
-    .showcase-tabs::-webkit-scrollbar {
-      display: none;
-    }
-
-    .tab-btn {
-      flex: 0 0 auto;
-      scroll-snap-align: start;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      background: hsl(var(--cream-bg));
-      border: 1px solid hsla(var(--cream-border), 0.6);
-      padding: 8px 16px 8px 8px;
-      border-radius: 12px;
+    .dot-btn {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: hsla(var(--primary), 0.15);
+      border: none;
       cursor: pointer;
-      text-align: left;
-      font-family: inherit;
       transition: var(--transition-smooth);
     }
 
-    .tab-btn-thumb {
-      width: 42px;
-      height: 56px;
-      border-radius: 6px;
-      object-fit: cover;
-      border: 1px solid hsla(var(--primary), 0.1);
-      box-shadow: var(--shadow-sm);
-      transition: var(--transition-smooth);
-    }
-
-    .tab-btn-info {
-      display: flex;
-      flex-direction: column;
-      line-height: 1.2;
-    }
-
-    .tab-btn-lang {
-      font-size: 9px;
-      font-weight: 800;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      color: hsl(var(--text-muted));
-      margin-bottom: 2px;
-    }
-
-    .tab-btn-title {
-      font-size: 12px;
-      font-weight: 700;
-      color: hsl(var(--primary));
-    }
-
-    /* Active Tab styling */
-    .tab-btn.active {
-      background: hsl(var(--primary));
-      border-color: hsl(var(--primary));
-      box-shadow: var(--shadow-md);
-      transform: translateY(-2px);
-    }
-
-    .tab-btn.active .tab-btn-title {
-      color: white;
-    }
-
-    .tab-btn.active .tab-btn-lang {
-      color: hsla(0, 0%, 100%, 0.7);
-    }
-
-    .tab-btn.active .tab-btn-thumb {
-      border-color: white;
-      transform: scale(1.05);
+    .dot-btn.active {
+      width: 28px;
+      border-radius: 999px;
+      background: hsl(var(--accent-orange));
+      box-shadow: 0 4px 12px hsla(var(--accent-orange), 0.35);
     }
 
     /* Poster Stage Grid */
@@ -1012,10 +954,8 @@
         <p>Click any poster to view it in high resolution</p>
       </div>
 
-      <!-- Carousel Tabs -->
-      <div class="showcase-tabs" id="showcase-tabs-container">
-        <!-- JS-inserted Tabs -->
-      </div>
+      <!-- Slideshow Navigation Dots -->
+      <div class="showcase-dots" id="showcase-dots-container"></div>
 
       <!-- Poster Stage -->
       <div class="showcase-stage">
@@ -1157,7 +1097,7 @@
     let activeIndex = 0;
 
     // DOM References
-    const tabsContainer = document.getElementById('showcase-tabs-container');
+    const dotsContainer = document.getElementById('showcase-dots-container');
     const activeImg = document.getElementById('poster-active-img');
     const activeDetails = document.getElementById('poster-active-details');
     
@@ -1178,23 +1118,37 @@
     const lightboxPrev = document.getElementById('lightbox-prev');
     const lightboxNext = document.getElementById('lightbox-next');
 
-    // 3. Build Tabs Dynamically
-    function buildTabs() {
-      tabsContainer.innerHTML = '';
+    // Autoplay configuration
+    let autoplayInterval;
+    const AUTOPLAY_DELAY = 6000; // 6 seconds per slide
+
+    function startAutoplay() {
+      stopAutoplay();
+      autoplayInterval = setInterval(() => {
+        let nextIndex = (activeIndex + 1) % postersData.length;
+        switchPoster(nextIndex);
+      }, AUTOPLAY_DELAY);
+    }
+
+    function stopAutoplay() {
+      if (autoplayInterval) {
+        clearInterval(autoplayInterval);
+      }
+    }
+
+    // 3. Build Dots Navigation Dynamically
+    function buildDots() {
+      dotsContainer.innerHTML = '';
       postersData.forEach((poster, index) => {
         const btn = document.createElement('button');
-        btn.className = `tab-btn ${index === activeIndex ? 'active' : ''}`;
-        btn.setAttribute('aria-label', `View poster: ${poster.title}`);
+        btn.className = `dot-btn ${index === activeIndex ? 'active' : ''}`;
+        btn.setAttribute('aria-label', `Go to slide ${index + 1}: ${poster.title}`);
         
-        btn.innerHTML = `
-          <img src="${poster.src}" class="tab-btn-thumb" alt="Thumbnail" />
-          <div class="tab-btn-info">
-            <span class="tab-btn-title">${poster.shortTitle}</span>
-          </div>
-        `;
-        
-        btn.addEventListener('click', () => switchPoster(index));
-        tabsContainer.appendChild(btn);
+        btn.addEventListener('click', () => {
+          switchPoster(index);
+          startAutoplay(); // Reset autoplay timer on manual click
+        });
+        dotsContainer.appendChild(btn);
       });
     }
 
@@ -1203,15 +1157,12 @@
       if (index === activeIndex) return;
       activeIndex = index;
 
-      // Update Tabs styling
-      const tabs = tabsContainer.querySelectorAll('.tab-btn');
-      tabs.forEach((tab, idx) => {
-        if (idx === activeIndex) tab.classList.add('active');
-        else tab.classList.remove('active');
+      // Update Dots active styling
+      const dots = dotsContainer.querySelectorAll('.dot-btn');
+      dots.forEach((dot, idx) => {
+        if (idx === activeIndex) dot.classList.add('active');
+        else dot.classList.remove('active');
       });
-
-      // Scroll active tab into view if needed
-      tabs[activeIndex].scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
 
       // Cross-fade visuals & details
       activeImg.style.opacity = '0';
@@ -1264,8 +1215,15 @@
         window.open(`https://wa.me/919037407267?text=${customText}`, '_blank');
       };
 
-      buildTabs();
+      buildDots();
+      startAutoplay();
     }
+
+    // Pause autoplay when hovering over the poster frame or details to let users read in peace!
+    interactiveFrame.addEventListener('mouseenter', stopAutoplay);
+    interactiveFrame.addEventListener('mouseleave', startAutoplay);
+    activeDetails.addEventListener('mouseenter', stopAutoplay);
+    activeDetails.addEventListener('mouseleave', startAutoplay);
 
     // 5. Advanced 3D Hover Tilt Effect
     interactiveFrame.addEventListener('mousemove', (e) => {
@@ -1306,13 +1264,14 @@
       if (nextIndex < 0) nextIndex = postersData.length - 1;
       switchPoster(nextIndex);
       lightboxImg.src = postersData[nextIndex].src;
+      startAutoplay(); // Reset timer on manual click
     }
 
     function nextLightbox() {
-      let nextIndex = activeIndex + 1;
-      if (nextIndex >= postersData.length) nextIndex = 0;
+      let nextIndex = (activeIndex + 1) % postersData.length;
       switchPoster(nextIndex);
       lightboxImg.src = postersData[nextIndex].src;
+      startAutoplay(); // Reset timer on manual click
     }
 
     lightboxClose.addEventListener('click', closeLightbox);
@@ -1349,14 +1308,15 @@
       const threshold = 50;
       if (touchStartX - touchEndX > threshold) {
         // Swipe left -> Next poster
-        let nextIndex = activeIndex + 1;
-        if (nextIndex >= postersData.length) nextIndex = 0;
+        let nextIndex = (activeIndex + 1) % postersData.length;
         switchPoster(nextIndex);
+        startAutoplay(); // Reset timer on swipe
       } else if (touchEndX - touchStartX > threshold) {
         // Swipe right -> Prev poster
         let prevIndex = activeIndex - 1;
         if (prevIndex < 0) prevIndex = postersData.length - 1;
         switchPoster(prevIndex);
+        startAutoplay(); // Reset timer on swipe
       }
     }
 
