@@ -1,0 +1,1382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Parsalo — Doorstep Parcel Relay · Launching Soon</title>
+  <meta name="description" content="Parsalo is a hyper-local courier relay startup launching in Thrissur. We pick up your parcel from your doorstep and drop it at the right courier office. Coming soon." />
+  
+  <!-- Open Graph / Social Preview -->
+  <meta property="og:title" content="Parsalo — Doorstep Parcel Relay" />
+  <meta property="og:description" content="Reliable door-to-door delivery, coming soon to Thrissur, Kerala." />
+  <meta property="og:image" content="parsalo-logo.png" />
+  <meta property="og:type" content="website" />
+  
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="parsalo-logo.png" />
+  
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;0,9..144,800;1,9..144,400;1,9..144,600&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+
+  <style>
+    /* -------------------------------------------------------------
+       DESIGN SYSTEM & VARIABLES (Curated HSL Color Scheme)
+       ------------------------------------------------------------- */
+    :root {
+      /* Palette inspired by Parsalo's startup branding posters */
+      --primary: 215, 60%, 12%;      /* Premium Deep Slate Navy: #0E1726 */
+      --primary-soft: 215, 30%, 25%; /* Soft Navy */
+      --accent-orange: 19, 82%, 55%;  /* Brand Vibrant Orange: #E66E2E */
+      --accent-orange-light: 19, 95%, 96%; /* Ultra Soft Orange for backgrounds */
+      --accent-green: 155, 65%, 38%;  /* Poster 3 Success Green: #1FA86A */
+      --accent-gold: 40, 75%, 52%;    /* Poster 4 Rich Gold: #E2A93E */
+      --accent-blue: 228, 70%, 55%;   /* Rain Blue: #4766E2 */
+      
+      --cream-bg: 36, 30%, 97%;       /* Rich Warm Ivory Cream: #FAF7F2 */
+      --cream-card: 0, 0%, 100%;       /* Pure White Card */
+      --cream-border: 36, 12%, 88%;   /* Soft Sand Border: #E2DCD0 */
+      
+      --text-main: 215, 60%, 12%;     /* Deep Slate Navy for text */
+      --text-muted: 215, 18%, 40%;    /* Muted grey-blue */
+      
+      --font-serif: 'Fraunces', Georgia, serif;
+      --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+      
+      --shadow-sm: 0 2px 8px rgba(15, 23, 38, 0.04);
+      --shadow-md: 0 12px 30px -10px rgba(15, 23, 38, 0.08);
+      --shadow-lg: 0 24px 50px -15px rgba(15, 23, 38, 0.12);
+      
+      --transition-smooth: all 0.35s cubic-bezier(0.25, 0.8, 0.25, 1);
+      --border-radius-lg: 24px;
+      --border-radius-md: 16px;
+    }
+
+    /* Reset & Base Styles */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html, body {
+      min-height: 100%;
+      scroll-behavior: smooth;
+    }
+
+    body {
+      font-family: var(--font-sans);
+      color: hsl(var(--text-main));
+      background-color: hsl(var(--cream-bg));
+      /* Organic ambient glow gradients matching the posters */
+      background-image: 
+        radial-gradient(circle at 10% 5%, hsla(var(--accent-orange), 0.07) 0%, transparent 45%),
+        radial-gradient(circle at 90% 90%, hsla(var(--accent-gold), 0.08) 0%, transparent 50%),
+        radial-gradient(circle at 85% 15%, hsla(var(--accent-green), 0.05) 0%, transparent 40%);
+      line-height: 1.6;
+      padding: 24px 20px 64px;
+      overflow-x: hidden;
+    }
+
+    .wrap {
+      max-width: 1080px;
+      margin: 0 auto;
+      animation: pageReveal 0.8s cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
+
+    /* Keyframes */
+    @keyframes pageReveal {
+      from { opacity: 0; transform: translateY(15px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes pulseGlow {
+      0% { box-shadow: 0 0 0 0 hsla(var(--accent-orange), 0.5); }
+      70% { box-shadow: 0 0 0 10px hsla(var(--accent-orange), 0); }
+      100% { box-shadow: 0 0 0 0 hsla(var(--accent-orange), 0); }
+    }
+
+    @keyframes floatEffect {
+      0% { transform: translateY(0px); }
+      50% { transform: translateY(-6px); }
+      100% { transform: translateY(0px); }
+    }
+
+    /* -------------------------------------------------------------
+       HEADER
+       ------------------------------------------------------------- */
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 56px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid hsla(var(--cream-border), 0.4);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      text-decoration: none;
+      color: inherit;
+    }
+
+    .brand img {
+      width: 58px;
+      height: 58px;
+      border-radius: 14px;
+      display: block;
+      box-shadow: var(--shadow-sm);
+      transition: var(--transition-smooth);
+    }
+
+    .brand:hover img {
+      transform: scale(1.05) rotate(-2deg);
+    }
+
+    .brand-text {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .brand-name {
+      font-size: 26px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      color: hsl(var(--primary));
+      line-height: 1.1;
+    }
+
+    .brand-tag {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: hsl(var(--accent-orange));
+      margin-top: 2px;
+    }
+
+    .badge-launch {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+      border-radius: 999px;
+      background: hsl(var(--cream-card));
+      border: 1px solid hsla(var(--cream-border), 0.7);
+      color: hsl(var(--primary));
+      font-size: 11.5px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .badge-launch::before {
+      content: "";
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: hsl(var(--accent-orange));
+      animation: pulseGlow 2.2s infinite;
+    }
+
+    /* -------------------------------------------------------------
+       HERO SECTION
+       ------------------------------------------------------------- */
+    .hero {
+      text-align: center;
+      max-width: 840px;
+      margin: 0 auto 64px;
+    }
+
+    h1 {
+      font-family: var(--font-serif);
+      font-weight: 700;
+      font-size: clamp(38px, 6.8vw, 72px);
+      line-height: 1.05;
+      letter-spacing: -2px;
+      color: hsl(var(--primary));
+      margin-bottom: 24px;
+    }
+
+    h1 .door-highlight {
+      position: relative;
+      display: inline-block;
+      font-style: italic;
+      font-weight: 500;
+      color: hsl(var(--primary-soft));
+    }
+
+    /* Custom vector oval accent circle around 'door' matching the poster visual */
+    h1 .door-highlight::after {
+      content: "";
+      position: absolute;
+      left: -6px;
+      right: -6px;
+      bottom: 2px;
+      height: 0.6em;
+      border: 2px solid hsl(var(--accent-orange));
+      border-radius: 50%;
+      transform: rotate(-2.5deg);
+      pointer-events: none;
+      opacity: 0.85;
+    }
+
+    .hero-taglines {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    .lede-en {
+      font-size: clamp(16px, 2.2vw, 19px);
+      font-weight: 500;
+      color: hsl(var(--text-muted));
+      line-height: 1.5;
+    }
+
+    .lede-mal {
+      font-family: var(--font-serif);
+      font-size: clamp(15px, 2vw, 17.5px);
+      color: hsl(var(--accent-orange));
+      font-style: italic;
+      font-weight: 600;
+      border-top: 1px dashed hsla(var(--cream-border), 0.7);
+      padding-top: 10px;
+      margin-top: 4px;
+    }
+
+    /* -------------------------------------------------------------
+       INTERACTIVE POSTER SHOWCASE ("OUR STORY IN PRINT")
+       ------------------------------------------------------------- */
+    .showcase-section {
+      background: hsl(var(--cream-card));
+      border-radius: var(--border-radius-lg);
+      border: 1px solid hsla(var(--cream-border), 0.7);
+      padding: 40px;
+      margin-bottom: 72px;
+      box-shadow: var(--shadow-md);
+      position: relative;
+    }
+
+    .showcase-header {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+
+    .showcase-header h2 {
+      font-family: var(--font-serif);
+      font-size: 28px;
+      font-weight: 700;
+      color: hsl(var(--primary));
+      letter-spacing: -0.5px;
+    }
+
+    .showcase-header p {
+      font-size: 13.5px;
+      color: hsl(var(--text-muted));
+      margin-top: 4px;
+    }
+
+    /* Interactive Horizontal Tabs */
+    .showcase-tabs {
+      display: flex;
+      gap: 12px;
+      overflow-x: auto;
+      padding: 4px 4px 16px 4px;
+      margin-bottom: 36px;
+      scroll-snap-type: x mandatory;
+      scrollbar-width: none; /* Hide scrollbar for clean aesthetics */
+    }
+
+    .showcase-tabs::-webkit-scrollbar {
+      display: none;
+    }
+
+    .tab-btn {
+      flex: 0 0 auto;
+      scroll-snap-align: start;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: hsl(var(--cream-bg));
+      border: 1px solid hsla(var(--cream-border), 0.6);
+      padding: 8px 16px 8px 8px;
+      border-radius: 12px;
+      cursor: pointer;
+      text-align: left;
+      font-family: inherit;
+      transition: var(--transition-smooth);
+    }
+
+    .tab-btn-thumb {
+      width: 42px;
+      height: 56px;
+      border-radius: 6px;
+      object-fit: cover;
+      border: 1px solid hsla(var(--primary), 0.1);
+      box-shadow: var(--shadow-sm);
+      transition: var(--transition-smooth);
+    }
+
+    .tab-btn-info {
+      display: flex;
+      flex-direction: column;
+      line-height: 1.2;
+    }
+
+    .tab-btn-lang {
+      font-size: 9px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: hsl(var(--text-muted));
+      margin-bottom: 2px;
+    }
+
+    .tab-btn-title {
+      font-size: 12px;
+      font-weight: 700;
+      color: hsl(var(--primary));
+    }
+
+    /* Active Tab styling */
+    .tab-btn.active {
+      background: hsl(var(--primary));
+      border-color: hsl(var(--primary));
+      box-shadow: var(--shadow-md);
+      transform: translateY(-2px);
+    }
+
+    .tab-btn.active .tab-btn-title {
+      color: white;
+    }
+
+    .tab-btn.active .tab-btn-lang {
+      color: hsla(0, 0%, 100%, 0.7);
+    }
+
+    .tab-btn.active .tab-btn-thumb {
+      border-color: white;
+      transform: scale(1.05);
+    }
+
+    /* Poster Stage Grid */
+    .showcase-stage {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 48px;
+      align-items: center;
+    }
+
+    /* Visual Poster Stage (Left Column) */
+    .stage-visual {
+      display: flex;
+      justify-content: center;
+      position: relative;
+    }
+
+    .poster-frame {
+      position: relative;
+      width: 100%;
+      max-width: 360px;
+      aspect-ratio: 1 / 1.414; /* Standard poster ratio */
+      background: hsl(var(--cream-bg));
+      border-radius: var(--border-radius-md);
+      box-shadow: 
+        0 30px 60px -20px rgba(15, 23, 38, 0.25),
+        0 1px 3px rgba(15, 23, 38, 0.05);
+      overflow: hidden;
+      cursor: zoom-in;
+      transition: var(--transition-smooth);
+      perspective: 1000px;
+    }
+
+    /* 3D Tilt Wrapper */
+    .poster-3d-wrap {
+      width: 100%;
+      height: 100%;
+      transform-style: preserve-3d;
+      transition: transform 0.5s ease-out;
+    }
+
+    .poster-img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      transition: opacity 0.4s ease;
+      opacity: 1;
+    }
+
+    /* Overlay indicator */
+    .poster-zoom-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(15, 23, 38, 0.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transition: var(--transition-smooth);
+      color: white;
+      font-size: 13px;
+      font-weight: 600;
+      gap: 8px;
+      backdrop-filter: blur(4px);
+    }
+
+    .poster-frame:hover .poster-zoom-overlay {
+      opacity: 1;
+    }
+
+    .poster-frame:hover {
+      transform: translateY(-8px) scale(1.02);
+      box-shadow: 
+        0 40px 80px -25px rgba(15, 23, 38, 0.35),
+        0 1px 5px rgba(15, 23, 38, 0.05);
+    }
+
+    /* Poster Details Content (Right Column) */
+    .stage-details {
+      display: flex;
+      flex-direction: column;
+      opacity: 1;
+      transition: opacity 0.4s ease, transform 0.4s ease;
+    }
+
+    .stage-details.fade-out {
+      opacity: 0;
+      transform: translateX(10px);
+    }
+
+    .details-badge {
+      align-self: flex-start;
+      display: inline-flex;
+      align-items: center;
+      padding: 6px 12px;
+      border-radius: 99px;
+      font-size: 10px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: white;
+      margin-bottom: 20px;
+      transition: var(--transition-smooth);
+    }
+
+    .details-title {
+      font-family: var(--font-serif);
+      font-size: clamp(26px, 3.5vw, 36px);
+      font-weight: 700;
+      color: hsl(var(--primary));
+      line-height: 1.15;
+      margin-bottom: 16px;
+    }
+
+    /* Poster Original Quote Frame */
+    .details-quote-block {
+      background: hsl(var(--cream-bg));
+      border-left: 4px solid hsl(var(--accent-orange));
+      padding: 16px 20px;
+      border-radius: 0 var(--border-radius-md) var(--border-radius-md) 0;
+      margin-bottom: 24px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .quote-label {
+      font-size: 9.5px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: hsl(var(--text-muted));
+      margin-bottom: 6px;
+    }
+
+    .quote-text {
+      font-family: var(--font-serif);
+      font-size: 19px;
+      font-style: italic;
+      color: hsl(var(--primary));
+      font-weight: 600;
+      line-height: 1.35;
+    }
+
+    .quote-translation {
+      font-size: 12.5px;
+      color: hsl(var(--text-muted));
+      margin-top: 8px;
+      font-weight: 500;
+      display: flex;
+      align-items: flex-start;
+      gap: 6px;
+    }
+
+    .quote-translation::before {
+      content: "“";
+      font-size: 18px;
+      line-height: 1;
+      color: hsl(var(--accent-orange));
+    }
+
+    .details-description {
+      font-size: 14.5px;
+      color: hsl(var(--text-muted));
+      line-height: 1.6;
+      margin-bottom: 28px;
+    }
+
+    /* Quick Action Inside Showcase */
+    .details-action {
+      display: flex;
+      gap: 12px;
+    }
+
+    .details-action-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: hsl(var(--primary));
+      color: white;
+      text-decoration: none;
+      padding: 12px 20px;
+      border-radius: 10px;
+      font-size: 13.5px;
+      font-weight: 600;
+      transition: var(--transition-smooth);
+      box-shadow: var(--shadow-sm);
+      border: none;
+      cursor: pointer;
+    }
+
+    .details-action-btn:hover {
+      background: hsl(var(--accent-orange));
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-md);
+    }
+
+    /* -------------------------------------------------------------
+       CORE FEATURES SECTION (6 GRID)
+       ------------------------------------------------------------- */
+    .features-section {
+      margin-bottom: 72px;
+    }
+
+    .section-title {
+      text-align: center;
+      font-family: var(--font-serif);
+      font-size: 32px;
+      font-weight: 700;
+      color: hsl(var(--primary));
+      margin-bottom: 40px;
+      letter-spacing: -0.5px;
+    }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+    }
+
+    .feature-card {
+      background: hsl(var(--cream-card));
+      border: 1px solid hsla(var(--cream-border), 0.7);
+      border-radius: var(--border-radius-md);
+      padding: 28px 24px;
+      text-align: left;
+      transition: var(--transition-smooth);
+      box-shadow: var(--shadow-sm);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .feature-card::before {
+      content: "";
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 4px;
+      background: transparent;
+      transition: var(--transition-smooth);
+    }
+
+    .feature-card:hover {
+      transform: translateY(-6px);
+      box-shadow: var(--shadow-lg);
+      border-color: hsla(var(--cream-border), 0.2);
+    }
+
+    /* Dynamic top border coloring on hover matching each icon */
+    .feature-card:nth-child(1):hover::before { background: hsl(var(--accent-green)); }
+    .feature-card:nth-child(2):hover::before { background: hsl(260, 50%, 55%); }
+    .feature-card:nth-child(3):hover::before { background: hsl(var(--accent-orange)); }
+    .feature-card:nth-child(4):hover::before { background: hsl(var(--accent-gold)); }
+    .feature-card:nth-child(5):hover::before { background: hsl(var(--accent-blue)); }
+    .feature-card:nth-child(6):hover::before { background: hsl(340, 60%, 50%); }
+
+    .icon-wrap {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 20px;
+      transition: var(--transition-smooth);
+    }
+
+    .feature-card:hover .icon-wrap {
+      transform: scale(1.1) rotate(4deg);
+    }
+
+    /* Colors derived from posters */
+    .feature-card:nth-child(1) .icon-wrap { background: hsla(var(--accent-green), 0.12); color: hsl(var(--accent-green)); }
+    .feature-card:nth-child(2) .icon-wrap { background: hsla(260, 50%, 55%, 0.12); color: hsl(260, 50%, 55%); }
+    .feature-card:nth-child(3) .icon-wrap { background: hsla(var(--accent-orange), 0.12); color: hsl(var(--accent-orange)); }
+    .feature-card:nth-child(4) .icon-wrap { background: hsla(var(--accent-gold), 0.12); color: hsl(var(--accent-gold)); }
+    .feature-card:nth-child(5) .icon-wrap { background: hsla(var(--accent-blue), 0.12); color: hsl(var(--accent-blue)); }
+    .feature-card:nth-child(6) .icon-wrap { background: hsla(340, 60%, 50%, 0.12); color: hsl(340, 60%, 50%); }
+
+    .icon-wrap svg {
+      width: 24px;
+      height: 24px;
+      stroke-width: 2.2px;
+    }
+
+    .feature-card h3 {
+      font-size: 16px;
+      font-weight: 700;
+      color: hsl(var(--primary));
+      margin-bottom: 8px;
+    }
+
+    .feature-card p {
+      font-size: 13px;
+      color: hsl(var(--text-muted));
+      line-height: 1.5;
+    }
+
+    /* -------------------------------------------------------------
+       PARTNER RECRUITMENT BANNER
+       ------------------------------------------------------------- */
+    .partner-banner {
+      background: linear-gradient(135deg, #8A5F41 0%, #6E492F 100%);
+      color: #FAF7F2;
+      border-radius: var(--border-radius-lg);
+      padding: 56px 48px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+      box-shadow: var(--shadow-lg);
+    }
+
+    /* Ambient glow details inside recruitment card matching the palette */
+    .partner-banner::before {
+      content: "";
+      position: absolute;
+      top: -80px;
+      right: -80px;
+      width: 260px;
+      height: 260px;
+      background: radial-gradient(circle, rgba(204, 214, 127, 0.15) 0%, transparent 70%); /* #CCD67F */
+      pointer-events: none;
+    }
+
+    .partner-banner::after {
+      content: "";
+      position: absolute;
+      bottom: -100px;
+      left: -60px;
+      width: 280px;
+      height: 280px;
+      background: radial-gradient(circle, rgba(243, 228, 201, 0.15) 0%, transparent 70%); /* #F3E4C9 */
+      pointer-events: none;
+    }
+
+    .partner-inner {
+      position: relative;
+      z-index: 2;
+      max-width: 680px;
+      margin: 0 auto;
+    }
+
+    .partner-eyebrow {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 2.5px;
+      color: #CCD67F; /* Olive green from palette */
+      margin-bottom: 16px;
+    }
+
+    .partner-banner h2 {
+      font-family: var(--font-serif);
+      font-size: clamp(26px, 4.2vw, 40px);
+      font-weight: 700;
+      line-height: 1.15;
+      margin-bottom: 16px;
+      letter-spacing: -0.5px;
+    }
+
+    .partner-banner p {
+      font-size: 15.5px;
+      color: #F3E4C9; /* Soft cream color from palette */
+      margin-bottom: 36px;
+      line-height: 1.6;
+      opacity: 0.95;
+    }
+
+    .cta-row {
+      display: flex;
+      gap: 16px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      padding: 16px 28px;
+      border-radius: 14px;
+      font-size: 14.5px;
+      font-weight: 700;
+      text-decoration: none;
+      transition: var(--transition-smooth);
+      border: none;
+      cursor: pointer;
+      font-family: inherit;
+    }
+
+    .btn:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 16px 32px rgba(0, 0, 0, 0.35);
+    }
+
+    .btn-primary {
+      background: #CCD67F; /* Olive Green from palette */
+      color: #8A5F41;      /* Dark Brown from palette */
+    }
+
+    .btn-primary:hover {
+      background: #F3E4C9; /* Cream from palette */
+      color: #8A5F41;
+      transform: translateY(-3px);
+    }
+
+    .btn-secondary {
+      background: #A77F60; /* Light Brown from palette */
+      color: #F3E4C9;      /* Cream text */
+      border: 1px solid rgba(243, 228, 201, 0.2);
+    }
+
+    .btn-secondary:hover {
+      background: #F3E4C9; /* Cream from palette */
+      color: #8A5F41;      /* Dark Brown text */
+      border-color: #F3E4C9;
+      transform: translateY(-3px);
+    }
+
+    .btn svg {
+      width: 18px;
+      height: 18px;
+    }
+
+    /* -------------------------------------------------------------
+       FOOTER
+       ------------------------------------------------------------- */
+    footer {
+      text-align: center;
+      margin-top: 56px;
+      font-size: 13.5px;
+      color: hsl(var(--text-muted));
+      border-top: 1px solid hsla(var(--cream-border), 0.4);
+      padding-top: 24px;
+    }
+
+    footer .dot {
+      color: hsl(var(--accent-orange));
+      margin: 0 8px;
+      font-weight: 800;
+    }
+
+    footer strong {
+      color: hsl(var(--primary));
+    }
+
+    /* -------------------------------------------------------------
+       LIGHTBOX VIEWPORT MODAL
+       ------------------------------------------------------------- */
+    .lightbox-modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(10, 15, 24, 0.95);
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+      backdrop-filter: blur(8px);
+      padding: 20px;
+    }
+
+    .lightbox-modal.active {
+      opacity: 1;
+      pointer-events: all;
+    }
+
+    .lightbox-content {
+      position: relative;
+      width: 100%;
+      max-width: 500px;
+      aspect-ratio: 1 / 1.414;
+      max-height: 90vh;
+      border-radius: var(--border-radius-md);
+      box-shadow: 0 30px 90px rgba(0, 0, 0, 0.6);
+      transform: scale(0.95);
+      transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .lightbox-modal.active .lightbox-content {
+      transform: scale(1);
+    }
+
+    .lightbox-img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      border-radius: var(--border-radius-md);
+    }
+
+    .lightbox-close {
+      position: absolute;
+      top: -48px;
+      right: 0;
+      background: rgba(255, 255, 255, 0.15);
+      border: none;
+      color: white;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      transition: var(--transition-smooth);
+    }
+
+    .lightbox-close:hover {
+      background: rgba(255, 255, 255, 0.3);
+      transform: rotate(90deg);
+    }
+
+    .lightbox-nav {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      background: rgba(255, 255, 255, 0.15);
+      border: none;
+      color: white;
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: var(--transition-smooth);
+    }
+
+    .lightbox-nav:hover {
+      background: rgba(255, 255, 255, 0.3);
+      transform: translateY(-50%) scale(1.1);
+    }
+
+    .lightbox-prev {
+      left: -64px;
+    }
+
+    .lightbox-next {
+      right: -64px;
+    }
+
+    /* -------------------------------------------------------------
+       RESPONSIVE ADJUSTMENTS
+       ------------------------------------------------------------- */
+    @media (max-width: 900px) {
+      .showcase-stage {
+        grid-template-columns: 1fr;
+        gap: 32px;
+      }
+      .stage-visual {
+        order: -1;
+      }
+      .poster-frame {
+        max-width: 290px;
+      }
+      .features-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @media (max-width: 760px) {
+      body {
+        padding: 16px 16px 40px;
+      }
+      header {
+        margin-bottom: 36px;
+      }
+      .brand img {
+        width: 46px;
+        height: 46px;
+      }
+      .brand-name {
+        font-size: 21px;
+      }
+      .showcase-section {
+        padding: 24px 16px;
+      }
+      .details-title {
+        font-size: 24px;
+      }
+      .details-quote-block {
+        padding: 12px 16px;
+      }
+      .quote-text {
+        font-size: 16px;
+      }
+      .features-grid {
+        grid-template-columns: 1fr;
+      }
+      .partner-banner {
+        padding: 36px 20px;
+      }
+      .cta-row {
+        flex-direction: column;
+        width: 100%;
+      }
+      .btn {
+        width: 100%;
+        justify-content: center;
+      }
+      .lightbox-prev {
+        left: -10px;
+        background: rgba(0,0,0,0.5);
+      }
+      .lightbox-next {
+        right: -10px;
+        background: rgba(0,0,0,0.5);
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+
+    <!-- Sticky Header -->
+    <header>
+      <a href="#" class="brand">
+        <img src="parsalo-logo.png" alt="Parsalo logo" />
+        <div class="brand-text">
+          <span class="brand-name">parsalo</span>
+          <span class="brand-tag">Doorstep Parcel Relay</span>
+        </div>
+      </a>
+    </header>
+
+    <!-- Hero Header -->
+    <section class="hero">
+      <h1>Reliable <span class="door-highlight">door</span><br/>to door delivery</h1>
+      <div class="hero-taglines">
+        <p class="lede-en">
+          A delivery partner picks up your parcel from your doorstep, submits it at the right
+          courier office, and another partner delivers it at the destination.
+        </p>
+        <p class="lede-mal">കയ്യിൽ നിന്ന് കയ്യിലേക്കും — doorstep to doorstep, reliable & fast.</p>
+      </div>
+    </section>
+
+    <!-- Interactive Poster Showcase -->
+    <section class="showcase-section" aria-label="Brand Poster Showcase">
+      <div class="showcase-header">
+        <h2>Explore Our Campaigns</h2>
+        <p>Click any poster to view it in high resolution</p>
+      </div>
+
+      <!-- Carousel Tabs -->
+      <div class="showcase-tabs" id="showcase-tabs-container">
+        <!-- JS-inserted Tabs -->
+      </div>
+
+      <!-- Poster Stage -->
+      <div class="showcase-stage">
+        <!-- Visual (Left) -->
+        <div class="stage-visual">
+          <div class="poster-frame" id="poster-interactive-frame">
+            <div class="poster-3d-wrap" id="poster-tilt-wrapper">
+              <img src="" alt="" class="poster-img" id="poster-active-img" />
+            </div>
+            <div class="poster-zoom-overlay">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+              Click to Zoom
+            </div>
+          </div>
+        </div>
+
+        <!-- Details (Right) -->
+        <div class="stage-details" id="poster-active-details">
+          <span class="details-badge" id="details-badge">Campaign Spotlight</span>
+          <h3 class="details-title" id="details-title">Poster Title</h3>
+          
+          <div class="details-quote-block">
+            <div class="quote-label" id="quote-label-lang">Original Slogan</div>
+            <div class="quote-text" id="quote-text">Slogan copy...</div>
+            <div class="quote-translation" id="quote-translation">Translation text...</div>
+          </div>
+
+          <p class="details-description" id="details-description">Description copy detailing the startup's message...</p>
+
+          <div class="details-action">
+            <button class="details-action-btn" id="details-action-whatsapp">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"/></svg>
+              Enquire on WhatsApp
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+
+
+    <!-- Dark Partner Recruiting Card -->
+    <section class="partner-banner">
+      <div class="partner-inner">
+        <span class="partner-eyebrow">Join Us Early</span>
+        <h2>We're seeking delivery partners in Thrissur</h2>
+        <p>
+          Own a two-wheeler and know the city well? Earn flexibly, choose your own hours, and join 
+          Parsalo's founding launch team. Reach out — we'd love to chat.
+        </p>
+        <div class="cta-row">
+          <a class="btn btn-primary" href="https://wa.me/919037407267?text=Hi%20Parsalo%2C%20I%27m%20interested%20in%20becoming%20a%20delivery%20partner." target="_blank" rel="noopener">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"/></svg>
+            WhatsApp · +91 90374 07267
+          </a>
+          <a class="btn btn-secondary" href="mailto:parsalolabs@gmail.com?subject=Delivery%20partner%20enquiry">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+            parsalolabs@gmail.com
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+      &copy; <span id="year"></span> <strong>Parsalo Labs</strong>
+      <span class="dot">·</span> Launching in Thrissur, Kerala
+      <span class="dot">·</span> <a href="https://www.parsalo.com" style="color: inherit; text-decoration: none;">parsalo.com</a>
+    </footer>
+
+  </div>
+
+  <!-- Lightbox Zoom Modal -->
+  <div class="lightbox-modal" id="lightbox-modal">
+    <button class="lightbox-close" id="lightbox-close">&times;</button>
+    <button class="lightbox-nav lightbox-prev" id="lightbox-prev">&#10094;</button>
+    <button class="lightbox-nav lightbox-next" id="lightbox-next">&#10095;</button>
+    <div class="lightbox-content">
+      <img src="" alt="High resolution poster view" class="lightbox-img" id="lightbox-img" />
+    </div>
+  </div>
+
+  <!-- -------------------------------------------------------------
+       JAVASCRIPT DYNAMIC DATA & INTERACTIVE GALLERY LOGIC
+       ------------------------------------------------------------- -->
+  <script>
+    // 1. Dynamic Year
+    document.getElementById('year').textContent = new Date().getFullYear();
+
+    // 2. Poster Campaign Data
+    const postersData = [
+      {
+        src: 'assets/posters/poster-reliable-delivery.jpg',
+        lang: 'English',
+        category: 'Overview Slogan',
+        title: 'Reliable Door-to-Door Delivery',
+        quote: 'Reliable door to door delivery',
+        quoteLang: 'en',
+        translation: 'Core Service Standard',
+        description: 'The foundation of Parsalo. Our core service ensures that a local courier relay partner handles the safe pick-up, swift sorting drop-off at official couriers, and exact destination hand-delivery of your packages.',
+        themeColor: 'var(--accent-orange)'
+      },
+      {
+        src: 'assets/posters/poster-chalo-parsalo.jpg',
+        lang: 'Hindi',
+        category: 'Slogan Slogan',
+        title: 'Chalo Parsalo Karo!',
+        quote: 'चलो parsalo करो',
+        quoteLang: 'hi',
+        translation: 'Aapka parcel. Humari zimmedari. Doorstep se doorstep.',
+        description: 'Our absolute promise to customers in North and South alike. We shoulder the full stress of transit. Once you hand it to us, doorstep-to-doorstep coordination is completely our responsibility.',
+        themeColor: 'var(--accent-orange)'
+      },
+      {
+        src: 'assets/posters/poster-hand-to-hand.jpg',
+        lang: 'Malayalam',
+        category: 'Core Process',
+        title: 'Hand to Hand Relay Process',
+        quote: 'കയ്യിൽ നിന്ന് കയ്യിലേക്ക്',
+        quoteLang: 'ml',
+        translation: 'From hand to hand, doorstep to doorstep. Relaying parcels made easy.',
+        description: 'See the journey of your parcel. A dedicated first-mile rider picks it up from your house, manages dropping it off at premium offices like ST/DTDC/Professional, and our last-mile local partner secures final delivery.',
+        themeColor: 'var(--accent-green)'
+      },
+      {
+        src: 'assets/posters/poster-auto-delivery.jpg',
+        lang: 'Malayalam',
+        category: 'Zero Effort',
+        title: 'No Need to Step Out',
+        quote: 'പാഴ്സൽ എത്തും. നിങ്ങൾ ഇറങ്ങേണ്ട.',
+        quoteLang: 'ml',
+        translation: 'Your parcel will arrive safely. You do not need to leave your home.',
+        description: 'A tribute to the heart of local Kerala transport. Whether it is narrow village roads or bustling rain-swept highway junctions, our local riders manage the heavy lifting on their auto-rickshaws and bikes, so you stay comfortable.',
+        themeColor: 'var(--accent-gold)'
+      },
+      {
+        src: 'assets/posters/poster-rain-delivery.jpg',
+        lang: 'Malayalam',
+        category: 'Reliability',
+        title: 'Monsoon or Shine, We Deliver',
+        quote: 'മഴയുണ്ടെങ്കിലും, പാർസൽ എത്തും.',
+        quoteLang: 'ml',
+        translation: 'Even if it pours with heavy rain, your parcel will reach its destination.',
+        description: 'Rain is a beautiful constant in Thrissur, Kerala, and so is our promise. No monsoon showers or stormy blockages will keep us from ensuring your parcel reaches the right courier hubs safely and securely on schedule.',
+        themeColor: 'var(--accent-blue)'
+      }
+    ];
+
+    // State
+    let activeIndex = 0;
+
+    // DOM References
+    const tabsContainer = document.getElementById('showcase-tabs-container');
+    const activeImg = document.getElementById('poster-active-img');
+    const activeDetails = document.getElementById('poster-active-details');
+    
+    const detailsBadge = document.getElementById('details-badge');
+    const detailsTitle = document.getElementById('details-title');
+    const quoteLabelLang = document.getElementById('quote-label-lang');
+    const quoteText = document.getElementById('quote-text');
+    const quoteTranslation = document.getElementById('quote-translation');
+    const detailsDescription = document.getElementById('details-description');
+    const actionWhatsappBtn = document.getElementById('details-action-whatsapp');
+    
+    const interactiveFrame = document.getElementById('poster-interactive-frame');
+    const tiltWrapper = document.getElementById('poster-tilt-wrapper');
+    
+    // Lightbox DOM References
+    const lightboxModal = document.getElementById('lightbox-modal');
+    const lightboxImg = document.getElementById('lightbox-img');
+    const lightboxClose = document.getElementById('lightbox-close');
+    const lightboxPrev = document.getElementById('lightbox-prev');
+    const lightboxNext = document.getElementById('lightbox-next');
+
+    // 3. Build Tabs Dynamically
+    function buildTabs() {
+      tabsContainer.innerHTML = '';
+      postersData.forEach((poster, index) => {
+        const btn = document.createElement('button');
+        btn.className = `tab-btn ${index === activeIndex ? 'active' : ''}`;
+        btn.setAttribute('aria-label', `View poster: ${poster.title}`);
+        
+        btn.innerHTML = `
+          <img src="${poster.src}" class="tab-btn-thumb" alt="Thumbnail" />
+          <div class="tab-btn-info">
+            <span class="tab-btn-lang">${poster.lang}</span>
+            <span class="tab-btn-title">${poster.title.split(' ')[0]} ${poster.title.split(' ')[1] || ''}</span>
+          </div>
+        `;
+        
+        btn.addEventListener('click', () => switchPoster(index));
+        tabsContainer.appendChild(btn);
+      });
+    }
+
+    // 4. Switch Poster with Premium Cross-fade Animation
+    function switchPoster(index) {
+      if (index === activeIndex) return;
+      activeIndex = index;
+
+      // Update Tabs styling
+      const tabs = tabsContainer.querySelectorAll('.tab-btn');
+      tabs.forEach((tab, idx) => {
+        if (idx === activeIndex) tab.classList.add('active');
+        else tab.classList.remove('active');
+      });
+
+      // Scroll active tab into view if needed
+      tabs[activeIndex].scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+
+      // Cross-fade visuals & details
+      activeImg.style.opacity = '0';
+      activeDetails.classList.add('fade-out');
+
+      setTimeout(() => {
+        const currentData = postersData[activeIndex];
+
+        // Update image
+        activeImg.src = currentData.src;
+        activeImg.alt = `${currentData.title} - Parsalo campaign poster`;
+
+        // Update details
+        detailsBadge.textContent = currentData.category;
+        detailsBadge.style.backgroundColor = currentData.themeColor;
+        detailsTitle.textContent = currentData.title;
+        
+        quoteLabelLang.textContent = `Original Slogan (${currentData.lang})`;
+        quoteText.textContent = currentData.quote;
+        quoteTranslation.textContent = currentData.translation;
+        detailsDescription.textContent = currentData.description;
+
+        // Custom Whatsapp Text
+        const customText = encodeURIComponent(`Hi Parsalo, I saw your "${currentData.title}" campaign and I want to enquire about doorstep delivery services in Thrissur!`);
+        actionWhatsappBtn.onclick = () => {
+          window.open(`https://wa.me/919037407267?text=${customText}`, '_blank');
+        };
+
+        // Fade back in
+        activeImg.style.opacity = '1';
+        activeDetails.classList.remove('fade-out');
+      }, 350);
+    }
+
+    // Initialize Showcase
+    function initShowcase() {
+      // First load setting
+      const currentData = postersData[activeIndex];
+      activeImg.src = currentData.src;
+      activeImg.alt = `${currentData.title} - Parsalo campaign poster`;
+      
+      detailsBadge.textContent = currentData.category;
+      detailsBadge.style.backgroundColor = currentData.themeColor;
+      detailsTitle.textContent = currentData.title;
+      quoteLabelLang.textContent = `Original Slogan (${currentData.lang})`;
+      quoteText.textContent = currentData.quote;
+      quoteTranslation.textContent = currentData.translation;
+      detailsDescription.textContent = currentData.description;
+
+      const customText = encodeURIComponent(`Hi Parsalo, I saw your "${currentData.title}" campaign and I want to enquire about doorstep delivery services in Thrissur!`);
+      actionWhatsappBtn.onclick = () => {
+        window.open(`https://wa.me/919037407267?text=${customText}`, '_blank');
+      };
+
+      buildTabs();
+    }
+
+    // 5. Advanced 3D Hover Tilt Effect
+    interactiveFrame.addEventListener('mousemove', (e) => {
+      const rect = interactiveFrame.getBoundingClientRect();
+      const x = e.clientX - rect.left; // x position inside element
+      const y = e.clientY - rect.top;  // y position inside element
+      
+      const centerX = rect.width / 2;
+      const centerY = rect.height / 2;
+      
+      // Calculate rotation limits (-15deg to +15deg)
+      const rotateX = ((centerY - y) / centerY) * 12;
+      const rotateY = ((x - centerX) / centerX) * 12;
+
+      tiltWrapper.style.transform = `rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.03, 1.03, 1.03)`;
+    });
+
+    interactiveFrame.addEventListener('mouseleave', () => {
+      tiltWrapper.style.transform = 'rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)';
+    });
+
+    // 6. Interactive Lightbox Modal Viewer
+    interactiveFrame.addEventListener('click', () => {
+      openLightbox(activeIndex);
+    });
+
+    function openLightbox(index) {
+      lightboxImg.src = postersData[index].src;
+      lightboxModal.classList.add('active');
+    }
+
+    function closeLightbox() {
+      lightboxModal.classList.remove('active');
+    }
+
+    function prevLightbox() {
+      let nextIndex = activeIndex - 1;
+      if (nextIndex < 0) nextIndex = postersData.length - 1;
+      switchPoster(nextIndex);
+      lightboxImg.src = postersData[nextIndex].src;
+    }
+
+    function nextLightbox() {
+      let nextIndex = activeIndex + 1;
+      if (nextIndex >= postersData.length) nextIndex = 0;
+      switchPoster(nextIndex);
+      lightboxImg.src = postersData[nextIndex].src;
+    }
+
+    lightboxClose.addEventListener('click', closeLightbox);
+    lightboxPrev.addEventListener('click', prevLightbox);
+    lightboxNext.addEventListener('click', nextLightbox);
+
+    // Close lightbox on click outside the image
+    lightboxModal.addEventListener('click', (e) => {
+      if (e.target === lightboxModal) closeLightbox();
+    });
+
+    // Keyboard support for Lightbox
+    window.addEventListener('keydown', (e) => {
+      if (!lightboxModal.classList.contains('active')) return;
+      if (e.key === 'Escape') closeLightbox();
+      if (e.key === 'ArrowLeft') prevLightbox();
+      if (e.key === 'ArrowRight') nextLightbox();
+    });
+
+    // Swipe gestures on mobile posters
+    let touchStartX = 0;
+    let touchEndX = 0;
+    
+    interactiveFrame.addEventListener('touchstart', (e) => {
+      touchStartX = e.changedTouches[0].screenX;
+    }, { passive: true });
+
+    interactiveFrame.addEventListener('touchend', (e) => {
+      touchEndX = e.changedTouches[0].screenX;
+      handleSwipe();
+    }, { passive: true });
+
+    function handleSwipe() {
+      const threshold = 50;
+      if (touchStartX - touchEndX > threshold) {
+        // Swipe left -> Next poster
+        let nextIndex = activeIndex + 1;
+        if (nextIndex >= postersData.length) nextIndex = 0;
+        switchPoster(nextIndex);
+      } else if (touchEndX - touchStartX > threshold) {
+        // Swipe right -> Prev poster
+        let prevIndex = activeIndex - 1;
+        if (prevIndex < 0) prevIndex = postersData.length - 1;
+        switchPoster(prevIndex);
+      }
+    }
+
+    // Start everything on DOM Load
+    window.addEventListener('DOMContentLoaded', initShowcase);
+  </script>
+</body>
+</html>
