@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../core/theme.dart';
 import '../state/providers.dart';
 import '../widgets/assigned_job_tile.dart';
+import '../widgets/incoming_offers_stack.dart';
 import '../widgets/online_toggle.dart';
 import '../widgets/profits_card.dart';
 
@@ -104,18 +105,8 @@ class _Body extends StatelessWidget {
             subtitle:
                 'Switch on duty to start receiving offers in your area.',
           )
-        else if (snapshot.jobs.available.isEmpty)
-          const _EmptyState(
-            icon: '🔭',
-            title: 'Scanning Thrissur…',
-            subtitle: 'New jobs will appear here automatically.',
-          )
         else
-          const _EmptyState(
-            icon: '⏳',
-            title: 'Offers waiting',
-            subtitle: 'Swipe-to-accept lands in Phase 3.',
-          ),
+          IncomingOffersStack(available: snapshot.jobs.available),
       ],
     );
   }

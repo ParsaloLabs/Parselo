@@ -27,6 +27,9 @@ dependencies:
   # Location
   geolocator: ^13.0.2
 
+  # Audio (incoming-offer chime)
+  audioplayers: ^6.1.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

@@ -63,6 +63,8 @@ String humanizeError(String code) {
       return 'OTP does not match. Try again.';
     case 'transition_not_allowed':
       return 'That status change is not allowed.';
+    case 'job_unavailable':
+      return 'This offer was just taken by another agent.';
     default:
       return 'Something went wrong ($code).';
   }

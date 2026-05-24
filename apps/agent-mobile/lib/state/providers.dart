@@ -152,3 +152,29 @@ final onlineStatusProvider =
     profile?.isOnline ?? false,
   );
 });
+
+// ─── Dismissed offer ids (session-scoped, no server roundtrip) ───────────────
+
+class DismissedOffersNotifier extends StateNotifier<Set<String>> {
+  DismissedOffersNotifier() : super(const <String>{});
+
+  void dismiss(String id) {
+    if (state.contains(id)) return;
+    state = {...state, id};
+  }
+
+  void prune(Set<String> stillAvailable) {
+    final next = state.intersection(stillAvailable);
+    if (next.length != state.length) state = next;
+  }
+
+  void clear() {
+    if (state.isEmpty) return;
+    state = const <String>{};
+  }
+}
+
+final dismissedOffersProvider =
+    StateNotifierProvider<DismissedOffersNotifier, Set<String>>((ref) {
+  return DismissedOffersNotifier();
+});
