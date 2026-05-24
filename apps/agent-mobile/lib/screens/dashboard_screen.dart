@@ -85,11 +85,11 @@ class _Body extends StatelessWidget {
           Column(
             children: [
               for (final order in snapshot.jobs.assigned) ...[
-                AssignedJobTile(
-                  order: order,
-                  onTap: () {
-                    // Job detail comes in Phase 4.
-                  },
+                Builder(
+                  builder: (ctx) => AssignedJobTile(
+                    order: order,
+                    onTap: () => ctx.push('/dashboard/jobs/${order.id}'),
+                  ),
                 ),
                 const SizedBox(height: 10),
               ],

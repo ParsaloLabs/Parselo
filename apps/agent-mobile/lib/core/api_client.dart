@@ -65,6 +65,12 @@ String humanizeError(String code) {
       return 'That status change is not allowed.';
     case 'job_unavailable':
       return 'This offer was just taken by another agent.';
+    case 'otp_mismatch':
+      return 'OTP does not match. Ask the customer again.';
+    case 'failure_reason_required':
+      return 'Pick a failure reason first.';
+    case 'http_404':
+      return 'Not found — this job may have been removed.';
     default:
       return 'Something went wrong ($code).';
   }

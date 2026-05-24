@@ -30,6 +30,14 @@ dependencies:
   # Audio (incoming-offer chime)
   audioplayers: ^6.1.0
 
+  # Maps & deep links (job detail)
+  google_maps_flutter: ^2.10.0
+  url_launcher: ^6.3.1
+
+  # PDF download + open (authorization letter)
+  path_provider: ^2.1.5
+  open_filex: ^4.5.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

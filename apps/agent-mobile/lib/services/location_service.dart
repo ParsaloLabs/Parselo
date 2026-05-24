@@ -15,9 +15,18 @@ class LocationService {
   final AgentService _agent;
   StreamSubscription<Position>? _sub;
 
+  /// Broadcast stream of the latest agent location while tracking is on.
+  /// Map widgets subscribe to this instead of starting a parallel geolocator
+  /// listener.
+  final StreamController<Position> _positions =
+      StreamController<Position>.broadcast();
+  Position? _last;
+
   LocationService(this._agent);
 
   bool get isTracking => _sub != null;
+  Stream<Position> get positions => _positions.stream;
+  Position? get lastKnown => _last;
 
   Future<void> start() async {
     if (_sub != null) return;
@@ -42,6 +51,8 @@ class LocationService {
         distanceFilter: 20, // metres
       ),
     ).listen((pos) {
+      _last = pos;
+      _positions.add(pos);
       _agent.postLocation(pos.latitude, pos.longitude);
     });
   }

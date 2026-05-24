@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:geolocator/geolocator.dart';
 
 import '../core/api_client.dart';
 import '../core/token_storage.dart';
@@ -177,4 +178,10 @@ class DismissedOffersNotifier extends StateNotifier<Set<String>> {
 final dismissedOffersProvider =
     StateNotifierProvider<DismissedOffersNotifier, Set<String>>((ref) {
   return DismissedOffersNotifier();
+});
+
+// ─── Live agent position (auto-disposes when no listeners) ───────────────────
+
+final agentPositionProvider = StreamProvider.autoDispose<Position>((ref) {
+  return ref.read(locationServiceProvider).positions;
 });

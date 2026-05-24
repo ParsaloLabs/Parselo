@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:dio/dio.dart';
 
 import '../core/api_client.dart';
@@ -99,6 +101,18 @@ class AgentService {
         body['location'] = {'lat': lat, 'lng': lng};
       }
       await _api.dio.post('/agent/jobs/$id/update-status', data: body);
+    } on DioException catch (e) {
+      throw extractErrorCode(e);
+    }
+  }
+
+  Future<Uint8List> downloadAuthorizationPdf(String orderId) async {
+    try {
+      final res = await _api.dio.get<List<int>>(
+        '/orders/$orderId/authorization.pdf',
+        options: Options(responseType: ResponseType.bytes),
+      );
+      return Uint8List.fromList(res.data!);
     } on DioException catch (e) {
       throw extractErrorCode(e);
     }

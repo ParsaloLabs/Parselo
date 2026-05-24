@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'screens/dashboard_screen.dart';
+import 'screens/job_detail_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/profile_screen.dart';
 import 'screens/splash_screen.dart';
@@ -38,6 +39,11 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: 'profile',
             builder: (_, _) => const ProfileScreen(),
+          ),
+          GoRoute(
+            path: 'jobs/:id',
+            builder: (_, state) =>
+                JobDetailScreen(orderId: state.pathParameters['id']!),
           ),
         ],
       ),
