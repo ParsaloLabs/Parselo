@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'core/config/pricing_config.dart';
 import 'core/storage/token_store.dart';
 import 'core/theme/theme.dart';
 import 'features/auth/presentation/auth_notifier.dart';
@@ -9,6 +11,8 @@ import 'features/dashboard/presentation/home_screen.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await TokenStore.init();
+  // Fire-and-forget: defaults match backend, so UI is usable before this returns.
+  unawaited(PricingConfig.instance.load());
   runApp(const MyApp());
 }
 

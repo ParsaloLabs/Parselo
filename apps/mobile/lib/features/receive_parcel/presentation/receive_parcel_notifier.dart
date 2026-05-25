@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import '../../../core/config/pricing_config.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/widgets/map_selection_dialog.dart';
 import '../../send_parcel/presentation/send_parcel_notifier.dart' as sp;
@@ -83,11 +84,11 @@ class ReceiveParcelNotifier extends ChangeNotifier {
   String? get idProofFileName => _idProofFileName;
   bool get agreed => _agreed;
 
-  // Pricing math
-  int get pickupFee => 9900;
-  int get deliveryFee => _sameDay ? 3000 : 0;
+  // Pricing math — sourced from PricingConfig (filled by /config/pricing).
+  int get pickupFee => PricingConfig.instance.receivePickupFeePaise;
+  int get deliveryFee => _sameDay ? PricingConfig.instance.sameDayDeliveryFeePaise : 0;
   int get service => pickupFee + deliveryFee;
-  int get gst => (service * 0.18).round();
+  int get gst => (service * PricingConfig.instance.gstRate).round();
   int get totalAmount => service + gst;
 
   // Setters

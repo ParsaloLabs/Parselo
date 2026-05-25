@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/config/pricing_config.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/widgets/map_selection_dialog.dart';
 
@@ -119,10 +120,10 @@ class SendParcelNotifier extends ChangeNotifier {
   List<CourierQuote> get quotes => _quotes;
   CourierQuote? get selectedQuote => _selectedQuote;
 
-  // Pricing helper
+  // Pricing helper — sourced from PricingConfig (filled by /config/pricing).
   int get courierCharge => _selectedQuote?.pricePaise ?? 0;
-  int get serviceFee => 4900;
-  int get gst => (serviceFee * 0.18).round();
+  int get serviceFee => PricingConfig.instance.sendBaseServiceFeePaise;
+  int get gst => (serviceFee * PricingConfig.instance.gstRate).round();
   int get totalAmount => courierCharge + serviceFee + gst;
 
   // Setters

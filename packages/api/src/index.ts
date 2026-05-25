@@ -11,6 +11,7 @@ import ordersRouter from './routes/orders';
 import agentRouter from './routes/agent';
 import adminRouter from './routes/admin';
 import paymentsRouter, { webhookHandler } from './routes/payments';
+import configRouter from './routes/config';
 
 const app = express();
 app.use(cors());
@@ -38,6 +39,7 @@ app.use('/api/v1/orders', ordersRouter);
 app.use('/api/v1/agent', agentRouter);
 app.use('/api/v1/admin', adminRouter);
 app.use('/api/v1/payments', paymentsRouter);
+app.use('/api/v1/config', configRouter);
 
 app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   console.error('[api:error]', err);
