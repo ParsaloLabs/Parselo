@@ -8,8 +8,6 @@ class StatusMapper {
     'delivered': 'Delivered',
     'cancelled': 'Cancelled',
     'failed': 'Failed',
-    'at_courier_office': 'At courier office',
-    'shipped': 'Shipped',
   };
 
   static String getLabel(String status) {
