@@ -26,12 +26,23 @@ class PushService {
       FlutterLocalNotificationsPlugin();
   final StreamController<RemoteMessage> _taps =
       StreamController<RemoteMessage>.broadcast();
+  final StreamController<String> _tokenChanges =
+      StreamController<String>.broadcast();
 
   String? _token;
   bool _ready = false;
 
   Stream<RemoteMessage> get taps => _taps.stream;
+  Stream<String> get tokenChanges => _tokenChanges.stream;
   String? get currentToken => _token;
+
+  /// Re-fetches the token from Firebase. Use this instead of [currentToken]
+  /// when you need a guaranteed value — on a cold launch the cached field
+  /// may still be null while FCM is finishing registration.
+  Future<String?> ensureToken() async {
+    _token ??= await FirebaseMessaging.instance.getToken();
+    return _token;
+  }
 
   /// Initialise once at app start. Idempotent.
   Future<void> init() async {
@@ -63,7 +74,11 @@ class PushService {
     await messaging.requestPermission(alert: true, badge: true, sound: true);
 
     _token = await messaging.getToken();
-    messaging.onTokenRefresh.listen((t) => _token = t);
+    if (_token != null) _tokenChanges.add(_token!);
+    messaging.onTokenRefresh.listen((t) {
+      _token = t;
+      _tokenChanges.add(t);
+    });
 
     // Foreground: FCM does NOT auto-show on Android. Render via local plugin.
     FirebaseMessaging.onMessage.listen(_onForegroundMessage);
@@ -113,6 +128,7 @@ class PushService {
 
   void dispose() {
     _taps.close();
+    _tokenChanges.close();
   }
 }
 

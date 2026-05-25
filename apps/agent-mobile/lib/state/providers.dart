@@ -48,9 +48,19 @@ enum AuthStatus { unknown, signedIn, signedOut }
 class AuthStateNotifier extends StateNotifier<AuthStatus> {
   final AuthService _auth;
   final AgentService _agent;
+  StreamSubscription<String>? _tokenSub;
 
   AuthStateNotifier(this._auth, this._agent) : super(AuthStatus.unknown) {
+    _tokenSub = pushService.tokenChanges.listen((t) {
+      if (state == AuthStatus.signedIn) unawaited(_pushToken(t));
+    });
     _bootstrap();
+  }
+
+  @override
+  void dispose() {
+    _tokenSub?.cancel();
+    super.dispose();
   }
 
   Future<void> _bootstrap() async {
@@ -74,11 +84,16 @@ class AuthStateNotifier extends StateNotifier<AuthStatus> {
     state = AuthStatus.signedOut;
   }
 
-  /// POST the current FCM token to the API so the backend can target this
-  /// device. Safe to call even if push isn't ready yet — bails silently.
+  /// Resolve the FCM token (re-fetching if the cached value is null) and POST
+  /// it. On cold launch the cached field can still be null while FCM is
+  /// finishing registration — `ensureToken` handles that race.
   Future<void> _syncPushToken() async {
-    final token = pushService.currentToken;
+    final token = await pushService.ensureToken();
     if (token == null || token.isEmpty) return;
+    await _pushToken(token);
+  }
+
+  Future<void> _pushToken(String token) async {
     final platform = Platform.isIOS ? 'ios' : 'android';
     await _agent.registerDeviceToken(token, platform);
   }

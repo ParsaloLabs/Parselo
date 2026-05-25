@@ -1,6 +1,5 @@
-import 'dart:typed_data';
-
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 
 import '../core/api_client.dart';
 import '../models/agent_profile.dart';
@@ -79,17 +78,22 @@ class AgentService {
         '/agent/device-token',
         data: {'token': token, 'platform': platform},
       );
-    } on DioException catch (_) {
-      // Token registration is best-effort: if it fails the agent still
-      // sees offers via the 8s dashboard poll. Don't block the UI.
+      debugPrint('[push] device-token registered (platform=$platform)');
+    } on DioException catch (e) {
+      // Best-effort: agent still sees offers via the 8s dashboard poll. But
+      // log so we can tell when push is silently broken.
+      debugPrint(
+        '[push] device-token register FAILED '
+        'status=${e.response?.statusCode} body=${e.response?.data} msg=${e.message}',
+      );
     }
   }
 
   Future<void> unregisterDeviceToken(String token) async {
     try {
       await _api.dio.delete('/agent/device-token', data: {'token': token});
-    } on DioException catch (_) {
-      // Logout proceeds regardless of unregister success.
+    } on DioException catch (e) {
+      debugPrint('[push] device-token unregister failed: ${e.message}');
     }
   }
 
