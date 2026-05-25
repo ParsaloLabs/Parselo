@@ -117,6 +117,81 @@
       border-bottom: 1px solid hsla(var(--cream-border), 0.4);
     }
 
+    /* Countdown Timer styling */
+    .countdown-timer {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 4px;
+      font-family: var(--font-sans);
+    }
+
+    .countdown-label {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1.2px;
+      color: hsl(var(--accent-orange));
+      margin-right: 2px;
+    }
+
+    .countdown-digits {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: hsl(var(--cream-card));
+      padding: 6px 12px;
+      border-radius: 12px;
+      border: 1px solid hsla(var(--cream-border), 0.7);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .time-block {
+      display: flex;
+      align-items: baseline;
+      gap: 1px;
+    }
+
+    .time-block .number {
+      font-size: 18px;
+      font-weight: 800;
+      color: hsl(var(--primary));
+      letter-spacing: -0.5px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .time-block .unit {
+      font-size: 10px;
+      font-weight: 600;
+      color: hsla(var(--text-muted), 0.85);
+      text-transform: lowercase;
+    }
+
+    .time-separator {
+      font-size: 14px;
+      font-weight: 700;
+      color: hsla(var(--cream-border), 0.8);
+      margin-top: -2px;
+      animation: blink 1s ease infinite;
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    @media (max-width: 480px) {
+      header {
+        flex-direction: column;
+        align-items: center;
+        gap: 16px;
+        text-align: center;
+      }
+      .countdown-timer {
+        align-items: center;
+      }
+    }
+
     .brand {
       display: flex;
       align-items: center;
@@ -933,6 +1008,32 @@
           <span class="brand-tag">Doorstep Parcel Relay</span>
         </div>
       </a>
+
+      <!-- Countdown Timer Widget -->
+      <div class="countdown-timer" id="launch-timer">
+        <div class="countdown-label">Launching In</div>
+        <div class="countdown-digits">
+          <div class="time-block">
+            <span class="number" id="days">03</span>
+            <span class="unit">d</span>
+          </div>
+          <div class="time-separator">:</div>
+          <div class="time-block">
+            <span class="number" id="hours">00</span>
+            <span class="unit">h</span>
+          </div>
+          <div class="time-separator">:</div>
+          <div class="time-block">
+            <span class="number" id="minutes">00</span>
+            <span class="unit">m</span>
+          </div>
+          <div class="time-separator">:</div>
+          <div class="time-block">
+            <span class="number" id="seconds">00</span>
+            <span class="unit">s</span>
+          </div>
+        </div>
+      </div>
     </header>
 
     <!-- Hero Header -->
@@ -1196,6 +1297,47 @@
       }, 350);
     }
 
+    // Countdown Timer Logic
+    function startCountdown() {
+      // Set the target date: exactly 3 days (72 hours) starting from May 25, 2026 23:08:34 GMT+0530
+      const targetDate = new Date('2026-05-28T23:08:34+05:30').getTime();
+
+      const daysEl = document.getElementById('days');
+      const hoursEl = document.getElementById('hours');
+      const minutesEl = document.getElementById('minutes');
+      const secondsEl = document.getElementById('seconds');
+      const timerLabel = document.querySelector('.countdown-label');
+
+      function updateTimer() {
+        const now = new Date().getTime();
+        const distance = targetDate - now;
+
+        if (distance < 0) {
+          // If the countdown is finished, show LIVE badge
+          if (daysEl) daysEl.textContent = '00';
+          if (hoursEl) hoursEl.textContent = '00';
+          if (minutesEl) minutesEl.textContent = '00';
+          if (secondsEl) secondsEl.textContent = '00';
+          if (timerLabel) timerLabel.innerHTML = '✨ We Are Live! ✨';
+          clearInterval(timerInterval);
+          return;
+        }
+
+        const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+        const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
+        if (daysEl) daysEl.textContent = String(days).padStart(2, '0');
+        if (hoursEl) hoursEl.textContent = String(hours).padStart(2, '0');
+        if (minutesEl) minutesEl.textContent = String(minutes).padStart(2, '0');
+        if (secondsEl) secondsEl.textContent = String(seconds).padStart(2, '0');
+      }
+
+      updateTimer(); // run once immediately
+      const timerInterval = setInterval(updateTimer, 1000);
+    }
+
     // Initialize Showcase
     function initShowcase() {
       // First load setting
@@ -1217,6 +1359,7 @@
 
       buildDots();
       startAutoplay();
+      startCountdown(); // Start the countdown!
     }
 
     // Pause autoplay when hovering over the poster frame or details to let users read in peace!
