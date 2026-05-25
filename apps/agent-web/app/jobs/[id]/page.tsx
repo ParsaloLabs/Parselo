@@ -19,6 +19,10 @@ type Order = {
   drop_lat?: number | string | null;
   drop_lng?: number | string | null;
   drop_text?: string | null;
+  drop_branch_name?: string | null;
+  drop_branch_phone?: string | null;
+  drop_branch_hours?: string | null;
+  selected_courier_name?: string | null;
 };
 
 const PICKED_STATUSES = new Set(['parcel_collected', 'at_courier_office', 'out_for_delivery']);
@@ -147,17 +151,45 @@ export default function JobPage() {
         drop={{
           lat: toNum(order.drop_lat),
           lng: toNum(order.drop_lng),
-          label: order.drop_text ?? 'Drop',
+          label: order.order_type === 'send'
+            ? (order.drop_branch_name ?? order.selected_courier_name ?? 'Courier office')
+            : (order.drop_text ?? 'Drop'),
         }}
         activeLeg={PICKED_STATUSES.has(order.status) ? 'drop' : 'pickup'}
       />
 
-      {order.order_type === 'send' && order.recipient_name && (
+      {order.order_type === 'send' && (
         <div className="bg-white border border-slate-200 rounded-xl p-5 mb-4 text-sm">
-          <div className="text-xs uppercase text-slate-500 font-semibold mb-2">Recipient</div>
-          <div className="font-medium">{order.recipient_name}</div>
-          <div className="text-slate-600">{order.recipient_phone}</div>
-          <div className="text-slate-600 mt-2">{order.delivery_address}</div>
+          <div className="text-xs uppercase text-slate-500 font-semibold mb-2">
+            Drop at courier office
+          </div>
+          <div className="font-medium">
+            {order.drop_branch_name ?? order.selected_courier_name ?? 'Courier office'}
+          </div>
+          {order.drop_text && (
+            <div className="text-slate-600 mt-1">{order.drop_text}</div>
+          )}
+          {order.drop_branch_hours && (
+            <div className="text-xs text-slate-500 mt-1">Hours: {order.drop_branch_hours}</div>
+          )}
+          {order.drop_branch_phone && (
+            <a href={`tel:${order.drop_branch_phone}`}
+              className="inline-block mt-3 text-brand text-sm font-medium">📞 Call office</a>
+          )}
+        </div>
+      )}
+
+      {order.order_type === 'send' && order.recipient_name && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-5 mb-4 text-sm">
+          <div className="text-xs uppercase text-amber-900 font-semibold mb-2">
+            Hand-over details — read out at the counter
+          </div>
+          <div className="font-medium text-slate-900">{order.recipient_name}</div>
+          <div className="text-slate-700">{order.recipient_phone}</div>
+          <div className="text-slate-700 mt-2 whitespace-pre-line">{order.delivery_address}</div>
+          <p className="text-xs text-amber-900 mt-3">
+            Give these recipient details to the courier office so they can print the shipping label.
+          </p>
           {order.recipient_phone && (
             <a href={`tel:${order.recipient_phone}`}
               className="inline-block mt-3 text-brand text-sm font-medium">📞 Call recipient</a>

@@ -17,40 +17,6 @@ type ProfitData = {
   dailyProfits: Record<string, number>;
 };
 
-const DUMMY_JOBS: Job[] = [
-  {
-    id: 'dummy-1',
-    order_code: 'PRSL-DUMMY-901',
-    order_type: 'send',
-    status: 'pending',
-    total_amount: 12000,
-    recipient_name: 'Rahul Krishnan',
-    delivery_address: 'Kalyan Silks, Palace Road, Thrissur, Kerala',
-    parcel_description: 'Document folder & keys'
-  },
-  {
-    id: 'dummy-2',
-    order_code: 'PRSL-DUMMY-902',
-    order_type: 'receive',
-    status: 'pending',
-    total_amount: 18000,
-    recipient_name: 'Anjali Menon',
-    delivery_address: 'West Fort, Thrissur, Kerala',
-    parcel_description: 'Laptop Charger & Box',
-    source_tracking_id: 'DLV991238'
-  },
-  {
-    id: 'dummy-3',
-    order_code: 'PRSL-DUMMY-903',
-    order_type: 'send',
-    status: 'pending',
-    total_amount: 25000,
-    recipient_name: 'Dr. Mathew George',
-    delivery_address: 'Sobha City Mall, Puzhakkal, Thrissur, Kerala',
-    parcel_description: 'Personal package & shoes'
-  }
-];
-
 export default function DashboardPage() {
   const router = useRouter();
   const [online, setOnline] = useState(false);
@@ -162,17 +128,6 @@ export default function DashboardPage() {
   };
 
   const accept = async (id: string) => {
-    if (id.startsWith('dummy-')) {
-      const dj = DUMMY_JOBS.find((j) => j.id === id);
-      if (dj) {
-        setAssigned((curr) => [
-          { ...dj, status: 'agent_assigned' },
-          ...curr
-        ]);
-        dismissedIdsRef.current.add(id);
-      }
-      return;
-    }
     try {
       await api(`/agent/jobs/${id}/accept`, { method: 'POST' });
       await load();
@@ -205,11 +160,7 @@ export default function DashboardPage() {
     }, 350);
   }, [swipeState]);
 
-  // Filter out locally dismissed available jobs, merge with dummy jobs for test preview
-  const visibleAvailable = [
-    ...available,
-    ...DUMMY_JOBS.filter((dj) => !available.some((aj) => aj.order_code === dj.order_code))
-  ].filter((j) => !dismissedIdsRef.current.has(j.id));
+  const visibleAvailable = available.filter((j) => !dismissedIdsRef.current.has(j.id));
 
   const topJobId = visibleAvailable[0]?.id;
 

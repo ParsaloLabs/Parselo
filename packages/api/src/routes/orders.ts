@@ -54,20 +54,50 @@ router.post('/', requireAuth(['user']), async (req, res) => {
   if (parsed.data.order_type === 'send') {
     const d = parsed.data;
     const price = priceSendOrder({ courier_charge_paise: d.courier_charge_paise });
+
+    // Pin the nearest branch of the selected courier to the pickup location.
+    // Agent's map destination resolves to this branch — the recipient address
+    // is only read out to the courier counter for the shipping label.
+    const { rows: pickupRows } = await query<{ latitude: string | null; longitude: string | null }>(
+      `SELECT latitude, longitude FROM addresses WHERE id = $1 AND user_id = $2`,
+      [d.pickup_address_id, userId],
+    );
+    if (pickupRows.length === 0) {
+      return res.status(400).json({ error: 'pickup_address_not_found' });
+    }
+    const pLat = pickupRows[0].latitude !== null ? Number(pickupRows[0].latitude) : null;
+    const pLng = pickupRows[0].longitude !== null ? Number(pickupRows[0].longitude) : null;
+
+    const { rows: branchRows } = await query<{ id: string }>(
+      pLat !== null && pLng !== null
+        ? `SELECT id FROM courier_branches
+            WHERE courier_id = $1 AND latitude IS NOT NULL AND longitude IS NOT NULL
+            ORDER BY POW(latitude - $2, 2) + POW(longitude - $3, 2) ASC
+            LIMIT 1`
+        : `SELECT id FROM courier_branches WHERE courier_id = $1 LIMIT 1`,
+      pLat !== null && pLng !== null
+        ? [d.selected_courier_id, pLat, pLng]
+        : [d.selected_courier_id],
+    );
+    if (branchRows.length === 0) {
+      return res.status(400).json({ error: 'no_courier_branches_available' });
+    }
+    const selectedBranchId = branchRows[0].id;
+
     const { rows } = await query(
       `INSERT INTO orders (
          order_code, user_id, order_type, parcel_type, parcel_weight_kg, parcel_description,
          declared_value, pickup_address_id, recipient_name, recipient_phone, delivery_address,
          delivery_lat, delivery_lng,
-         selected_courier_id, scheduled_pickup_at,
+         selected_courier_id, selected_branch_id, scheduled_pickup_at,
          courier_charge, service_fee, gst_amount, total_amount, delivery_otp
-       ) VALUES ($1,$2,'send',$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19)
+       ) VALUES ($1,$2,'send',$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)
        RETURNING *`,
       [
         code, userId, d.parcel_type, d.parcel_weight_kg, d.parcel_description ?? null,
         d.declared_value ?? null, d.pickup_address_id, d.recipient_name, d.recipient_phone,
         d.delivery_address, d.delivery_lat ?? null, d.delivery_lng ?? null,
-        d.selected_courier_id, d.scheduled_pickup_at ?? null,
+        d.selected_courier_id, selectedBranchId, d.scheduled_pickup_at ?? null,
         price.courier_charge, price.service_fee, price.gst_amount, price.total, otp,
       ],
     );

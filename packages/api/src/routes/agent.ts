@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { query } from '../db';
 import { requireAuth } from '../auth';
 import { notifyOrderEvent } from '../notifications';
+import { sendPushToAgent } from '../push';
 
 const router = Router();
 
@@ -44,21 +45,29 @@ router.get('/profits', requireAuth(['agent']), async (req, res) => {
 // Surface unified pickup/drop coordinates per order so the agent app
 // can render both on one map regardless of order_type.
 //   send:    pickup = pickup_address (addresses table)
-//            drop   = orders.delivery_lat/lng + orders.delivery_address (free text)
-//   receive: pickup = source courier branch (courier_branches)
+//            drop   = selected courier branch (courier_branches via selected_branch_id)
+//                     — agent hands the parcel to the courier office; recipient
+//                     address is hand-over context only, not a routing target.
+//   receive: pickup = source courier branch (courier_branches via source_branch_id)
 //            drop   = delivery_address (addresses table)
 const JOBS_SELECT = `
   SELECT o.*,
-         COALESCE(pa.latitude, cb.latitude)                AS pickup_lat,
-         COALESCE(pa.longitude, cb.longitude)              AS pickup_lng,
-         COALESCE(pa.full_address, cb.full_address)        AS pickup_text,
-         COALESCE(da.latitude, o.delivery_lat)             AS drop_lat,
-         COALESCE(da.longitude, o.delivery_lng)            AS drop_lng,
-         COALESCE(da.full_address, o.delivery_address)     AS drop_text
+         COALESCE(pa.latitude, scb.latitude)               AS pickup_lat,
+         COALESCE(pa.longitude, scb.longitude)             AS pickup_lng,
+         COALESCE(pa.full_address, scb.full_address)       AS pickup_text,
+         COALESCE(da.latitude, dcb.latitude, o.delivery_lat)        AS drop_lat,
+         COALESCE(da.longitude, dcb.longitude, o.delivery_lng)      AS drop_lng,
+         COALESCE(da.full_address, dcb.full_address, o.delivery_address) AS drop_text,
+         dcb.name                                          AS drop_branch_name,
+         dcb.phone                                         AS drop_branch_phone,
+         dcb.opening_hours                                 AS drop_branch_hours,
+         dc.name                                           AS selected_courier_name
     FROM orders o
     LEFT JOIN addresses pa ON pa.id = o.pickup_address_id
     LEFT JOIN addresses da ON da.id = o.delivery_address_id
-    LEFT JOIN courier_branches cb ON cb.id = o.source_branch_id
+    LEFT JOIN courier_branches scb ON scb.id = o.source_branch_id
+    LEFT JOIN courier_branches dcb ON dcb.id = o.selected_branch_id
+    LEFT JOIN couriers dc ON dc.id = o.selected_courier_id
 `;
 
 router.get('/jobs', requireAuth(['agent']), async (req, res) => {
@@ -196,6 +205,36 @@ router.post('/location', requireAuth(['agent']), async (req, res) => {
     `UPDATE agents SET current_lat = $1, current_lng = $2 WHERE id = $3`,
     [parsed.data.lat, parsed.data.lng, agentId],
   );
+  res.json({ ok: true });
+});
+
+// Device-token registration for FCM pushes. Called from the agent app right
+// after sign-in and on token rotation. Upsert on (token) — if the device
+// is re-used by a different agent the row moves to the new owner.
+router.post('/device-token', requireAuth(['agent']), async (req, res) => {
+  const agentId = (req.principal as any).agentId;
+  const parsed = z.object({
+    token: z.string().min(20),
+    platform: z.enum(['android', 'ios']),
+  }).safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: 'invalid_input' });
+  await query(
+    `INSERT INTO agent_devices (agent_id, token, platform)
+       VALUES ($1, $2, $3)
+       ON CONFLICT (token) DO UPDATE SET agent_id = EXCLUDED.agent_id,
+                                          platform = EXCLUDED.platform,
+                                          updated_at = NOW()`,
+    [agentId, parsed.data.token, parsed.data.platform],
+  );
+  res.json({ ok: true });
+});
+
+router.delete('/device-token', requireAuth(['agent']), async (req, res) => {
+  const agentId = (req.principal as any).agentId;
+  const parsed = z.object({ token: z.string().min(20) }).safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: 'invalid_input' });
+  await query(`DELETE FROM agent_devices WHERE token = $1 AND agent_id = $2`,
+    [parsed.data.token, agentId]);
   res.json({ ok: true });
 });
 
