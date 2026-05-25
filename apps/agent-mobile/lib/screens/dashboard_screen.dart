@@ -96,7 +96,7 @@ class _Body extends StatelessWidget {
             ],
           ),
         const SizedBox(height: 24),
-        _SectionLabel('Incoming offers (${snapshot.jobs.available.length})'),
+        _SectionLabel('Incoming offers (${snapshot.jobs.offered.length})'),
         const SizedBox(height: 10),
         if (!online)
           const _EmptyState(
@@ -106,7 +106,7 @@ class _Body extends StatelessWidget {
                 'Switch on duty to start receiving offers in your area.',
           )
         else
-          IncomingOffersStack(available: snapshot.jobs.available),
+          IncomingOffersStack(offered: snapshot.jobs.offered),
       ],
     );
   }

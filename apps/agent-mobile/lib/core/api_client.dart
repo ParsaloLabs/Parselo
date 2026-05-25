@@ -65,6 +65,16 @@ String humanizeError(String code) {
       return 'That status change is not allowed.';
     case 'job_unavailable':
       return 'This offer was just taken by another agent.';
+    case 'no_offer':
+      return 'This offer expired. Wait for the next one.';
+    case 'concurrent_cap_reached':
+      return 'You already have 2 active jobs. Finish one to take more.';
+    case 'agent_pending_approval':
+      return 'Your application is still under review.';
+    case 'agent_rejected':
+      return 'Your application was rejected. Contact admin.';
+    case 'agent_suspended':
+      return 'Your account is suspended. Contact admin.';
     case 'otp_mismatch':
       return 'OTP does not match. Ask the customer again.';
     case 'failure_reason_required':

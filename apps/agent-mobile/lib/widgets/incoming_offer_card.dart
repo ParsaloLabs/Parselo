@@ -7,6 +7,7 @@ class IncomingOfferCard extends StatelessWidget {
   final AgentOrder order;
   final bool isTop;
   final int timeLeftSeconds;
+  final int totalSeconds;
   final VoidCallback onAccept;
   final VoidCallback onSkip;
 
@@ -15,6 +16,7 @@ class IncomingOfferCard extends StatelessWidget {
     required this.order,
     required this.isTop,
     required this.timeLeftSeconds,
+    required this.totalSeconds,
     required this.onAccept,
     required this.onSkip,
   });
@@ -49,7 +51,11 @@ class IncomingOfferCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _CountdownBar(visible: isTop, timeLeft: timeLeftSeconds),
+            _CountdownBar(
+              visible: isTop,
+              timeLeft: timeLeftSeconds,
+              total: totalSeconds,
+            ),
             Padding(
               padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
               child: Column(
@@ -62,7 +68,15 @@ class IncomingOfferCard extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            _TypeBadge(isSend: isSend),
+                            Row(
+                              children: [
+                                _TypeBadge(isSend: isSend),
+                                if (order.offerDistanceM != null) ...[
+                                  const SizedBox(width: 6),
+                                  _DistanceBadge(meters: order.offerDistanceM!),
+                                ],
+                              ],
+                            ),
                             const SizedBox(height: 8),
                             Text(
                               order.orderCode,
@@ -150,7 +164,7 @@ class IncomingOfferCard extends StatelessWidget {
                         tooltip: 'Reject offer',
                       ),
                       if (isTop)
-                        _AutoSkipBadge(timeLeft: timeLeftSeconds)
+                        _AutoSkipBadge(timeLeft: timeLeftSeconds.clamp(0, 999))
                       else
                         const SizedBox.shrink(),
                       _CircleButton(
@@ -176,12 +190,18 @@ class IncomingOfferCard extends StatelessWidget {
 class _CountdownBar extends StatelessWidget {
   final bool visible;
   final int timeLeft;
-  const _CountdownBar({required this.visible, required this.timeLeft});
+  final int total;
+  const _CountdownBar({
+    required this.visible,
+    required this.timeLeft,
+    required this.total,
+  });
 
   @override
   Widget build(BuildContext context) {
     if (!visible) return const SizedBox(height: 3);
-    final ratio = (timeLeft / 45).clamp(0.0, 1.0);
+    final denom = total > 0 ? total : 30;
+    final ratio = (timeLeft / denom).clamp(0.0, 1.0);
     return SizedBox(
       height: 3,
       child: LayoutBuilder(
@@ -234,6 +254,44 @@ class _TypeBadge extends StatelessWidget {
               fontSize: 11,
               fontWeight: FontWeight.w700,
               color: BrandColors.brand,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DistanceBadge extends StatelessWidget {
+  final int meters;
+  const _DistanceBadge({required this.meters});
+
+  String _format() {
+    if (meters < 1000) return '$meters m';
+    final km = meters / 1000;
+    return '${km.toStringAsFixed(km < 10 ? 1 : 0)} km';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: BrandColors.slate50,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: BrandColors.slate200),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.near_me_rounded, size: 12, color: BrandColors.slate500),
+          const SizedBox(width: 4),
+          Text(
+            '${_format()} away',
+            style: const TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              color: BrandColors.slate700,
             ),
           ),
         ],

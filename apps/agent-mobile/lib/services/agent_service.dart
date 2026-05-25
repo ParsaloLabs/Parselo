@@ -8,8 +8,8 @@ import '../models/profits.dart';
 
 class JobsResponse {
   final List<AgentOrder> assigned;
-  final List<AgentOrder> available;
-  const JobsResponse({required this.assigned, required this.available});
+  final List<AgentOrder> offered;
+  const JobsResponse({required this.assigned, required this.offered});
 }
 
 class HistoryResponse {
@@ -38,10 +38,10 @@ class AgentService {
       final assigned = (data['assigned'] as List)
           .map((j) => AgentOrder.fromJson(j as Map<String, dynamic>))
           .toList();
-      final available = (data['available'] as List)
+      final offered = (data['offered'] as List? ?? const [])
           .map((j) => AgentOrder.fromJson(j as Map<String, dynamic>))
           .toList();
-      return JobsResponse(assigned: assigned, available: available);
+      return JobsResponse(assigned: assigned, offered: offered);
     } on DioException catch (e) {
       throw extractErrorCode(e);
     }
@@ -100,6 +100,14 @@ class AgentService {
   Future<void> acceptJob(String id) async {
     try {
       await _api.dio.post('/agent/jobs/$id/accept');
+    } on DioException catch (e) {
+      throw extractErrorCode(e);
+    }
+  }
+
+  Future<void> declineJob(String id) async {
+    try {
+      await _api.dio.post('/agent/jobs/$id/decline');
     } on DioException catch (e) {
       throw extractErrorCode(e);
     }

@@ -49,6 +49,12 @@ class AgentOrder {
   final String? failureReason;
   final DateTime? updatedAt;
 
+  // Dispatch offer metadata — only populated for rows under `offered` in /agent/jobs.
+  final String? offerId;
+  final int? offerDistanceM;
+  final DateTime? offerExpiresAt;
+  final int? offerRank;
+
   const AgentOrder({
     required this.id,
     required this.orderCode,
@@ -73,6 +79,10 @@ class AgentOrder {
     this.selectedCourierName,
     this.failureReason,
     this.updatedAt,
+    this.offerId,
+    this.offerDistanceM,
+    this.offerExpiresAt,
+    this.offerRank,
   });
 
   factory AgentOrder.fromJson(Map<String, dynamic> j) {
@@ -102,6 +112,12 @@ class AgentOrder {
       updatedAt: j['updated_at'] != null
           ? DateTime.tryParse(j['updated_at'] as String)
           : null,
+      offerId: _asString(j['offer_id']),
+      offerDistanceM: j['offer_distance_m'] != null ? _asInt(j['offer_distance_m']) : null,
+      offerExpiresAt: j['offer_expires_at'] != null
+          ? DateTime.tryParse(j['offer_expires_at'] as String)
+          : null,
+      offerRank: j['offer_rank'] != null ? _asInt(j['offer_rank']) : null,
     );
   }
 }

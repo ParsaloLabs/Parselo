@@ -11,8 +11,8 @@ import '../state/providers.dart';
 import 'incoming_offer_card.dart';
 
 class IncomingOffersStack extends ConsumerStatefulWidget {
-  final List<AgentOrder> available;
-  const IncomingOffersStack({super.key, required this.available});
+  final List<AgentOrder> offered;
+  const IncomingOffersStack({super.key, required this.offered});
 
   @override
   ConsumerState<IncomingOffersStack> createState() =>
@@ -20,12 +20,14 @@ class IncomingOffersStack extends ConsumerStatefulWidget {
 }
 
 class _IncomingOffersStackState extends ConsumerState<IncomingOffersStack> {
-  static const int _timerSeconds = 45;
+  // Server contract: dispatcher mints offers with a 30s TTL.
+  static const int _defaultTotalSeconds = 30;
   static const Duration _swipeDuration = Duration(milliseconds: 320);
 
   final Set<String> _seen = <String>{};
   Timer? _ticker;
-  int _timeLeft = _timerSeconds;
+  int _timeLeft = _defaultTotalSeconds;
+  int _totalSeconds = _defaultTotalSeconds;
   String? _trackedTopId;
 
   /// While an accept/skip animation is running we hide the card.
@@ -34,17 +36,17 @@ class _IncomingOffersStackState extends ConsumerState<IncomingOffersStack> {
   @override
   void initState() {
     super.initState();
-    _bootstrapSeen(widget.available);
+    _bootstrapSeen(widget.offered);
     _syncTimer();
   }
 
   @override
   void didUpdateWidget(covariant IncomingOffersStack oldWidget) {
     super.didUpdateWidget(oldWidget);
-    _maybeChime(widget.available);
+    _maybeChime(widget.offered);
     _syncTimer();
     // Drop dismissed entries that the server no longer returns.
-    final ids = widget.available.map((o) => o.id).toSet();
+    final ids = widget.offered.map((o) => o.id).toSet();
     ref.read(dismissedOffersProvider.notifier).prune(ids);
   }
 
@@ -75,27 +77,42 @@ class _IncomingOffersStackState extends ConsumerState<IncomingOffersStack> {
 
   List<AgentOrder> get _visible {
     final dismissed = ref.watch(dismissedOffersProvider);
-    return widget.available
+    return widget.offered
         .where((o) => !dismissed.contains(o.id) && _swiping?.id != o.id)
         .toList(growable: false);
   }
 
   void _syncTimer() {
-    final visible = widget.available
+    final visible = widget.offered
         .where((o) => !ref.read(dismissedOffersProvider).contains(o.id))
         .toList();
-    final topId = visible.isNotEmpty ? visible.first.id : null;
+    final top = visible.isNotEmpty ? visible.first : null;
+    final topId = top?.id;
     if (topId == _trackedTopId) return;
     _trackedTopId = topId;
     _ticker?.cancel();
-    setState(() => _timeLeft = _timerSeconds);
-    if (topId == null) return;
+    if (topId == null) {
+      setState(() => _timeLeft = _defaultTotalSeconds);
+      return;
+    }
+    final expires = top!.offerExpiresAt;
+    final initial = expires != null
+        ? expires.difference(DateTime.now()).inSeconds.clamp(0, 600)
+        : _defaultTotalSeconds;
+    setState(() {
+      // Use the larger of remaining vs default for the progress denominator so
+      // a stale-cached offer doesn't render as already-full.
+      _totalSeconds = initial > _defaultTotalSeconds ? initial : _defaultTotalSeconds;
+      _timeLeft = initial;
+    });
+    if (initial <= 0) return;
     _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
       if (!mounted) return;
       setState(() => _timeLeft -= 1);
       if (_timeLeft <= 0) {
         _ticker?.cancel();
-        _skip(topId);
+        // Server will auto-expire on its sweep; locally just hide the card.
+        ref.read(dismissedOffersProvider.notifier).dismiss(topId);
       }
     });
   }
@@ -122,13 +139,25 @@ class _IncomingOffersStackState extends ConsumerState<IncomingOffersStack> {
     }
   }
 
-  void _skip(String id) {
+  Future<void> _skip(String id) async {
     if (_swiping != null && _swiping!.id != id) return;
     setState(() => _swiping = (id: id, direction: _SwipeDirection.left));
+    // Fire decline server-side so the dispatcher can re-offer to another agent.
+    // Hide locally regardless so the UI feels immediate.
+    Future<void> serverDecline() async {
+      try {
+        await ref.read(agentServiceProvider).declineJob(id);
+      } catch (_) {
+        // Best-effort: TTL sweep will reclaim if the call fails.
+      }
+    }
+
+    unawaited(serverDecline());
     Future.delayed(_swipeDuration, () {
       if (!mounted) return;
       ref.read(dismissedOffersProvider.notifier).dismiss(id);
       setState(() => _swiping = null);
+      ref.invalidate(dashboardFeedProvider);
     });
   }
 
@@ -185,6 +214,7 @@ class _IncomingOffersStackState extends ConsumerState<IncomingOffersStack> {
                   order: order,
                   isTop: isTop,
                   timeLeftSeconds: _timeLeft,
+                  totalSeconds: _totalSeconds,
                   onAccept: () => _accept(order.id),
                   onSkip: () => _skip(order.id),
                 ),
@@ -199,9 +229,9 @@ class _IncomingOffersStackState extends ConsumerState<IncomingOffersStack> {
 
   Widget _swipingCard() {
     final s = _swiping!;
-    final order = widget.available.firstWhere(
+    final order = widget.offered.firstWhere(
       (o) => o.id == s.id,
-      orElse: () => widget.available.first,
+      orElse: () => widget.offered.first,
     );
     final dx = s.direction == _SwipeDirection.left ? -1.4 : 1.4;
     final rotation = s.direction == _SwipeDirection.left ? -0.25 : 0.25;
@@ -221,6 +251,7 @@ class _IncomingOffersStackState extends ConsumerState<IncomingOffersStack> {
               order: order,
               isTop: true,
               timeLeftSeconds: _timeLeft,
+              totalSeconds: _totalSeconds,
               onAccept: () {},
               onSkip: () {},
             ),
