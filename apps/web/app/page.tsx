@@ -154,6 +154,8 @@ export default function LandingPage() {
 
       <footer className="border-t border-slate-200 py-6 text-center text-sm text-slate-500">
         Parsalo · Thrissur, Kerala
+        <span className="mx-2">·</span>
+        <Link href="/agent-signup" className="text-brand hover:underline">Drive with us</Link>
       </footer>
     </div>
   );
