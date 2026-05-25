@@ -90,7 +90,7 @@ class _OtpScreenState extends State<OtpScreen> {
                             Expanded(
                               child: RichText(
                                 text: TextSpan(
-                                  style: TextStyle(color: Colors.amber.shade900, fontSize: 13, fontFamily: 'Outfit'),
+                                  style: TextStyle(color: Colors.amber.shade900, fontSize: 13),
                                   children: [
                                     const TextSpan(text: 'Dev mode — use OTP: '),
                                     TextSpan(

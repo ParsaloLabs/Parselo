@@ -99,7 +99,7 @@ class _ReceiveParcelScreenState extends State<ReceiveParcelScreen> {
                         Expanded(
                           child: RichText(
                             text: TextSpan(
-                              style: TextStyle(color: Colors.amber.shade900, fontSize: 12, height: 1.4, fontFamily: 'Outfit'),
+                              style: TextStyle(color: Colors.amber.shade900, fontSize: 12, height: 1.4),
                               children: const [
                                 TextSpan(text: 'How this works: ', style: TextStyle(fontWeight: FontWeight.bold)),
                                 TextSpan(text: 'Our agent visits the courier office on your behalf, collects your parcel, and delivers it to your address. You\'ll get an OTP to share with the agent at delivery.'),

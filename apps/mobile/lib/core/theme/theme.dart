@@ -40,9 +40,8 @@ class AppTheme {
         primary: AppColors.brand,
         secondary: AppColors.accent,
         background: AppColors.background,
-        surface: AppColors.surface,
       ),
-      fontFamily: 'Outfit', // Uses Outfit if available, falls back to default
+      // Removed fontFamily: 'Outfit' to allow default system font fallbacks, resolving iOS emoji rendering bugs
       textTheme: const TextTheme(
         headlineLarge: TextStyle(
           fontSize: 32,
