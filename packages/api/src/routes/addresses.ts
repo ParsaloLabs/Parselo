@@ -17,12 +17,12 @@ router.get('/', requireAuth(['user']), async (req, res) => {
 router.post('/', requireAuth(['user']), async (req, res) => {
   const userId = (req.principal as any).userId;
   const schema = z.object({
-    label: z.string().max(50).optional(),
+    label: z.string().max(50).optional().nullable(),
     full_address: z.string().min(5),
-    latitude: z.number().optional(),
-    longitude: z.number().optional(),
-    pincode: z.string().min(4).max(10).optional(),
-    is_default: z.boolean().optional(),
+    latitude: z.number().optional().nullable(),
+    longitude: z.number().optional().nullable(),
+    pincode: z.string().min(4).max(10).optional().nullable(),
+    is_default: z.boolean().optional().nullable(),
   });
   const parsed = schema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: 'invalid_input', details: parsed.error.format() });

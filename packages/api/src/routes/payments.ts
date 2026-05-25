@@ -67,9 +67,9 @@ router.post('/orders/:id/create', requireAuth(['user']), async (req, res) => {
 // Verify the signature returned by Razorpay Checkout and mark the order paid.
 const verifySchema = z.object({
   parsalo_order_id: z.string().uuid(),
-  razorpay_order_id: z.string().optional(),
-  razorpay_payment_id: z.string().optional(),
-  razorpay_signature: z.string().optional(),
+  razorpay_order_id: z.string().optional().nullable(),
+  razorpay_payment_id: z.string().optional().nullable(),
+  razorpay_signature: z.string().optional().nullable(),
 });
 
 router.post('/verify', requireAuth(['user']), async (req, res) => {
