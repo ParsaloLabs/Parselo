@@ -1,3 +1,6 @@
+import java.util.Properties
+import java.io.FileInputStream
+
 plugins {
     id("com.android.application")
     id("kotlin-android")
@@ -5,14 +8,13 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
-import java.util.Properties
-
-val localProperties = Properties()
-val localPropertiesFile = rootProject.file("local.properties")
-if (localPropertiesFile.exists()) {
-    localPropertiesFile.inputStream().use { localProperties.load(it) }
+// Pull MAPS_API_KEY from android/local.properties (gitignored) so the key
+// never ends up in the repo. Falls back to empty string in CI / when missing.
+val localProps = Properties().apply {
+    val f = rootProject.file("local.properties")
+    if (f.exists()) FileInputStream(f).use { load(it) }
 }
-val mapsApiKey = localProperties.getProperty("MAPS_API_KEY") ?: ""
+val mapsApiKey: String = localProps.getProperty("MAPS_API_KEY", "")
 
 android {
     namespace = "com.parsalo.mobile"

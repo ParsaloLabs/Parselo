@@ -43,3 +43,12 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Per-machine Android SDK + Maps key
+**/android/local.properties
+
+# Google Maps SDK key — must not land in the public repo
+**/ios/Flutter/Maps.xcconfig
+
+# Xcode SwiftPM caches (auto-generated, never user-edited)
+**/xcshareddata/swiftpm/
