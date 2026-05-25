@@ -66,5 +66,19 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>GoogleMapsAPIKey</key>
+	<string>$(GOOGLE_MAPS_API_KEY)</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Parsalo needs your location to pin pickup and delivery spots on the map.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Parsalo uses the camera to capture parcel photos and ID proof.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Parsalo needs photo access to attach parcel or ID images to your order.</string>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>tel</string>
+		<string>comgooglemaps</string>
+		<string>https</string>
+	</array>
 </dict>
 </plist>
