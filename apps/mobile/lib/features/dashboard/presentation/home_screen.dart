@@ -174,7 +174,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             },
                             child: Container(
                               height: 170,
-                              padding: const EdgeInsets.all(20),
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                               decoration: BoxDecoration(
                                 color: AppColors.brand,
                                 borderRadius: BorderRadius.circular(20),
@@ -204,12 +204,14 @@ class _HomeScreenState extends State<HomeScreen> {
                                       ),
                                       SizedBox(height: 4),
                                       Text(
-                                        'We pick up from you and ship via your preferred courier',
+                                        'We pick up and ship via your preferred courier',
                                         style: TextStyle(
                                           color: Color(0xFFDBEAFE),
                                           fontSize: 11,
                                           height: 1.3,
                                         ),
+                                        maxLines: 3,
+                                        overflow: TextOverflow.ellipsis,
                                       ),
                                     ],
                                   ),
@@ -231,7 +233,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             },
                             child: Container(
                               height: 170,
-                              padding: const EdgeInsets.all(20),
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                               decoration: BoxDecoration(
                                 color: AppColors.accent,
                                 borderRadius: BorderRadius.circular(20),
@@ -261,12 +263,14 @@ class _HomeScreenState extends State<HomeScreen> {
                                       ),
                                       SizedBox(height: 4),
                                       Text(
-                                        'Collect a parcel stuck at a courier office on your behalf',
+                                        'Collect a parcel stuck at a courier office',
                                         style: TextStyle(
                                           color: Color(0xFFFEF3C7),
                                           fontSize: 11,
                                           height: 1.3,
                                         ),
+                                        maxLines: 3,
+                                        overflow: TextOverflow.ellipsis,
                                       ),
                                     ],
                                   ),
