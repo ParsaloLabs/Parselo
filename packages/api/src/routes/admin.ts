@@ -6,6 +6,7 @@ import { query } from '../db';
 import { requireAuth } from '../auth';
 import { env } from '../env';
 import { notifyOrderEvent } from '../notifications';
+import { invalidateDispatchConfigCache } from '../dispatch';
 
 const router = Router();
 
@@ -204,6 +205,46 @@ router.get('/dashboard-stats', requireAuth(['admin']), async (_req, res) => {
       (SELECT COUNT(*)::int FROM orders WHERE payment_status = 'refund_requested') AS refund_requested_count
     `,
   );
+  res.json(rows[0]);
+});
+
+// Dispatch tunables — initial search radius and per-offer TTL.
+// Ladder used at runtime is derived as [r, 2r, 3r, null].
+router.get('/dispatch-config', requireAuth(['admin']), async (_req, res) => {
+  const { rows } = await query<{
+    initial_radius_m: number;
+    offer_ttl_seconds: number;
+    updated_at: string;
+  }>(`SELECT initial_radius_m, offer_ttl_seconds, updated_at FROM dispatch_config WHERE id = 1`);
+  if (rows.length === 0) return res.status(500).json({ error: 'config_missing' });
+  res.json(rows[0]);
+});
+
+const dispatchConfigSchema = z.object({
+  initial_radius_m: z.number().int().min(100).max(200_000),
+  offer_ttl_seconds: z.number().int().min(5).max(600),
+});
+
+router.post('/dispatch-config', requireAuth(['admin']), async (req, res) => {
+  const adminId = (req.principal as any).adminId;
+  const parsed = dispatchConfigSchema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: 'invalid_input', issues: parsed.error.issues });
+  const { initial_radius_m, offer_ttl_seconds } = parsed.data;
+  const { rows } = await query<{
+    initial_radius_m: number;
+    offer_ttl_seconds: number;
+    updated_at: string;
+  }>(
+    `UPDATE dispatch_config
+        SET initial_radius_m = $1,
+            offer_ttl_seconds = $2,
+            updated_at = NOW(),
+            updated_by = $3
+      WHERE id = 1
+      RETURNING initial_radius_m, offer_ttl_seconds, updated_at`,
+    [initial_radius_m, offer_ttl_seconds, adminId],
+  );
+  invalidateDispatchConfigCache();
   res.json(rows[0]);
 });
 

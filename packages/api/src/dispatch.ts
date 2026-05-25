@@ -23,14 +23,58 @@
 import { query } from './db';
 import { sendPushToAgent } from './push';
 
-const OFFER_TTL_SECONDS = 30;
+// Tunable at runtime via the admin panel (table: dispatch_config).
+// Defaults match the table's column defaults so a missing row degrades sanely.
+const DEFAULT_OFFER_TTL_SECONDS = 30;
+const DEFAULT_INITIAL_RADIUS_M = 5_000;
+
+// Fixed for now; can be promoted to dispatch_config if/when we need to tune.
 const PARALLEL_OFFERS = 3;
 const MAX_CONCURRENT_JOBS = 2;
 const LOCATION_FRESHNESS_MINUTES = 10;
 const BUSY_PENALTY = 1.3;
 
-// Radius ladder in metres. `null` = no radius cap (every eligible online agent).
-const RADIUS_LADDER_M: Array<number | null> = [5_000, 10_000, 15_000, null];
+type RuntimeConfig = {
+  offerTtlSeconds: number;
+  initialRadiusM: number;
+  radiusLadderM: Array<number | null>;
+};
+
+// Tiny in-process cache so a hot sweeper doesn't hammer the DB. Invalidated
+// from the admin save path so changes show up instantly in dev.
+const CONFIG_CACHE_MS = 10_000;
+let cachedConfig: { value: RuntimeConfig; loadedAt: number } | null = null;
+
+export function invalidateDispatchConfigCache(): void {
+  cachedConfig = null;
+}
+
+async function loadConfig(): Promise<RuntimeConfig> {
+  if (cachedConfig && Date.now() - cachedConfig.loadedAt < CONFIG_CACHE_MS) {
+    return cachedConfig.value;
+  }
+  let initialRadiusM = DEFAULT_INITIAL_RADIUS_M;
+  let offerTtlSeconds = DEFAULT_OFFER_TTL_SECONDS;
+  try {
+    const { rows } = await query<{ initial_radius_m: number; offer_ttl_seconds: number }>(
+      `SELECT initial_radius_m, offer_ttl_seconds FROM dispatch_config WHERE id = 1`,
+    );
+    if (rows[0]) {
+      initialRadiusM = rows[0].initial_radius_m;
+      offerTtlSeconds = rows[0].offer_ttl_seconds;
+    }
+  } catch (e) {
+    // Table missing (pre-migration) — fall back to defaults so dispatch still runs.
+    console.warn('[dispatch] config load failed, using defaults', e);
+  }
+  const value: RuntimeConfig = {
+    offerTtlSeconds,
+    initialRadiusM,
+    radiusLadderM: [initialRadiusM, initialRadiusM * 2, initialRadiusM * 3, null],
+  };
+  cachedConfig = { value, loadedAt: Date.now() };
+  return value;
+}
 
 type DispatchOrder = {
   id: string;
@@ -209,11 +253,13 @@ export async function dispatchOrder(orderId: string): Promise<number> {
     return 0;
   }
 
+  const cfg = await loadConfig();
+
   // Pick the radius for this attempt. Caller's attempts counter is stored on
   // the order; the ladder index is min(attempts, ladder length - 1) so we land
   // on the open-pool fallback once attempts >= ladder length.
-  const ladderIdx = Math.min(order.dispatch_attempts, RADIUS_LADDER_M.length - 1);
-  const radiusM = RADIUS_LADDER_M[ladderIdx];
+  const ladderIdx = Math.min(order.dispatch_attempts, cfg.radiusLadderM.length - 1);
+  const radiusM = cfg.radiusLadderM[ladderIdx];
   const attemptNumber = order.dispatch_attempts + 1;
 
   const candidates = await pickCandidates(order, radiusM, PARALLEL_OFFERS);
@@ -231,7 +277,7 @@ export async function dispatchOrder(orderId: string): Promise<number> {
     return 0;
   }
 
-  const expiresAt = new Date(Date.now() + OFFER_TTL_SECONDS * 1000);
+  const expiresAt = new Date(Date.now() + cfg.offerTtlSeconds * 1000);
   await Promise.all(
     candidates.map((c, idx) =>
       query(
@@ -320,10 +366,9 @@ export async function cancelOpenOffers(orderId: string, exceptAgentId?: string):
 }
 
 export const dispatchConfig = {
-  OFFER_TTL_SECONDS,
   PARALLEL_OFFERS,
   MAX_CONCURRENT_JOBS,
   LOCATION_FRESHNESS_MINUTES,
   BUSY_PENALTY,
-  RADIUS_LADDER_M,
+  loadRuntime: loadConfig,
 };
