@@ -1,6 +1,6 @@
 import { env } from './env';
 import { query } from './db';
-import { sendPushToAgent, sendPushToOnlineAgents } from './push';
+import { sendPushToAgent } from './push';
 
 const DEV = !env.MSG91_AUTH_KEY;
 
@@ -135,32 +135,3 @@ export async function notifyOrderEvent(orderId: string, event: OrderEvent) {
   }
 }
 
-// Broadcast a "new job available" ping to all currently-online agents.
-// Used when an order becomes paid + dispatchable. Goes out as both SMS
-// (legacy fallback) and FCM push (primary channel — wakes the app, can
-// fire the offer chime, survives the agent being mid-navigation).
-export async function notifyAgentsNewJob(orderId: string) {
-  try {
-    const { rows: orderRows } = await query<{
-      order_code: string; order_type: string; total_amount: number;
-    }>(
-      `SELECT order_code, order_type, total_amount FROM orders WHERE id = $1`, [orderId],
-    );
-    if (orderRows.length === 0) return;
-    const o = orderRows[0];
-
-    const { rows: agents } = await query<{ phone: string }>(
-      `SELECT phone FROM agents WHERE is_online = TRUE AND is_active = TRUE`,
-    );
-    const msg = `Parsalo: New ${o.order_type} job ${o.order_code} available. Open the app to accept.`;
-    await Promise.all(agents.map((a) => sendSms(a.phone, msg)));
-
-    await sendPushToOnlineAgents({
-      title: 'New offer near you',
-      body: `${o.order_type === 'send' ? 'Dispatch send' : 'Partner collect'} ${o.order_code} · ₹${Math.round(o.total_amount / 100)} · Tap to view`,
-      data: { orderId, kind: 'available' },
-    });
-  } catch (e) {
-    console.warn('[notify:broadcast] failed', e);
-  }
-}

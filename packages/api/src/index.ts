@@ -12,6 +12,7 @@ import agentRouter from './routes/agent';
 import adminRouter from './routes/admin';
 import paymentsRouter, { webhookHandler } from './routes/payments';
 import configRouter from './routes/config';
+import { dispatchSweep } from './dispatch';
 
 const app = express();
 app.use(cors());
@@ -49,3 +50,11 @@ app.use((err: any, _req: express.Request, res: express.Response, _next: express.
 app.listen(env.PORT, '0.0.0.0', () => {
   console.log(`[api] listening on http://localhost:${env.PORT}`);
 });
+
+// Background dispatch sweeper: expires stale offers + re-dispatches orders
+// whose offers all aged out. Runs in-process; safe because every operation is
+// idempotent and guarded by row-level state in the DB.
+const DISPATCH_SWEEP_INTERVAL_MS = 10_000;
+setInterval(() => { void dispatchSweep(); }, DISPATCH_SWEEP_INTERVAL_MS);
+// Initial kick so any pending paid orders from before the deploy get offered.
+setTimeout(() => { void dispatchSweep(); }, 2_000);

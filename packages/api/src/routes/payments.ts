@@ -6,7 +6,8 @@ import { z } from 'zod';
 import { query } from '../db';
 import { requireAuth } from '../auth';
 import { env } from '../env';
-import { notifyOrderEvent, notifyAgentsNewJob } from '../notifications';
+import { notifyOrderEvent } from '../notifications';
+import { dispatchOrder } from '../dispatch';
 
 const router = Router();
 
@@ -90,7 +91,7 @@ router.post('/verify', requireAuth(['user']), async (req, res) => {
       [parsalo_order_id],
     );
     notifyOrderEvent(parsalo_order_id, 'paid');
-    notifyAgentsNewJob(parsalo_order_id);
+    void dispatchOrder(parsalo_order_id);
     return res.json({ ok: true, dev_mode: true });
   }
 
@@ -110,7 +111,7 @@ router.post('/verify', requireAuth(['user']), async (req, res) => {
     [razorpay_payment_id, parsalo_order_id],
   );
   notifyOrderEvent(parsalo_order_id, 'paid');
-  notifyAgentsNewJob(parsalo_order_id);
+  void dispatchOrder(parsalo_order_id);
   res.json({ ok: true });
 });
 
@@ -144,7 +145,7 @@ export const webhookHandler = [
       );
       if ((rowCount ?? 0) > 0) {
         notifyOrderEvent(ppOrderId, 'paid');
-        notifyAgentsNewJob(ppOrderId);
+        void dispatchOrder(ppOrderId);
       }
     } else if (event === 'payment.failed') {
       await query(

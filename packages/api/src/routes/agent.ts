@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { query } from '../db';
 import { requireAuth } from '../auth';
 import { notifyOrderEvent } from '../notifications';
-import { sendPushToAgent } from '../push';
+import { cancelOpenOffers, dispatchConfig, dispatchOrder } from '../dispatch';
 
 const router = Router();
 
@@ -85,33 +85,110 @@ router.get('/jobs', requireAuth(['agent']), async (req, res) => {
   );
   const isOnline = agentRows[0]?.is_online ?? false;
 
-  const available = isOnline
+  // Offers: only orders the dispatcher has explicitly addressed to this
+  // agent and that are still within their TTL. Offline agents see none.
+  const offered = isOnline
     ? (await query(
-        `${JOBS_SELECT}
-          WHERE o.agent_id IS NULL AND o.status = 'pending' AND o.payment_status = 'paid'
-            AND (o.retry_at IS NULL OR o.retry_at <= NOW())
-          ORDER BY o.created_at ASC LIMIT 20`,
+        `SELECT o.*,
+                COALESCE(pa.latitude,  scb.latitude)                AS pickup_lat,
+                COALESCE(pa.longitude, scb.longitude)               AS pickup_lng,
+                COALESCE(pa.full_address, scb.full_address)         AS pickup_text,
+                COALESCE(da.latitude,  dcb.latitude,  o.delivery_lat)  AS drop_lat,
+                COALESCE(da.longitude, dcb.longitude, o.delivery_lng) AS drop_lng,
+                COALESCE(da.full_address, dcb.full_address, o.delivery_address) AS drop_text,
+                dcb.name                                            AS drop_branch_name,
+                dcb.phone                                           AS drop_branch_phone,
+                dcb.opening_hours                                   AS drop_branch_hours,
+                dc.name                                             AS selected_courier_name,
+                jo.id                                               AS offer_id,
+                jo.distance_m                                       AS offer_distance_m,
+                jo.expires_at                                       AS offer_expires_at,
+                jo.rank                                             AS offer_rank
+           FROM job_offers jo
+           JOIN orders o                  ON o.id   = jo.order_id
+           LEFT JOIN addresses pa         ON pa.id  = o.pickup_address_id
+           LEFT JOIN addresses da         ON da.id  = o.delivery_address_id
+           LEFT JOIN courier_branches scb ON scb.id = o.source_branch_id
+           LEFT JOIN courier_branches dcb ON dcb.id = o.selected_branch_id
+           LEFT JOIN couriers dc          ON dc.id  = o.selected_courier_id
+          WHERE jo.agent_id = $1
+            AND jo.status = 'offered'
+            AND jo.expires_at > NOW()
+            AND o.agent_id IS NULL
+            AND o.status = 'pending'
+          ORDER BY jo.distance_m ASC`,
+        [agentId],
       )).rows
     : [];
 
-  res.json({ assigned, available });
+  res.json({ assigned, offered });
 });
 
 router.post('/jobs/:id/accept', requireAuth(['agent']), async (req, res) => {
   const agentId = (req.principal as any).agentId;
+  const orderId = req.params.id;
+
+  // Must hold a live offer for this order. Without this check the targeted
+  // dispatch is trivially bypassed by hitting accept on any open order id.
+  const { rows: offerRows } = await query<{ id: string }>(
+    `SELECT id FROM job_offers
+       WHERE order_id = $1 AND agent_id = $2 AND status = 'offered' AND expires_at > NOW()
+       ORDER BY offered_at DESC LIMIT 1`,
+    [orderId, agentId],
+  );
+  if (offerRows.length === 0) return res.status(403).json({ error: 'no_offer' });
+
+  // Concurrent-job cap: agent may hold at most MAX_CONCURRENT_JOBS open
+  // assignments (1 in-flight + 1 queued in the default config).
+  const { rows: loadRows } = await query<{ active: number }>(
+    `SELECT COUNT(*)::int AS active FROM orders
+       WHERE agent_id = $1 AND status NOT IN ('delivered','cancelled','failed')`,
+    [agentId],
+  );
+  if ((loadRows[0]?.active ?? 0) >= dispatchConfig.MAX_CONCURRENT_JOBS) {
+    return res.status(409).json({ error: 'concurrent_cap_reached' });
+  }
+
   const { rows } = await query(
     `UPDATE orders SET agent_id = $1, status = 'agent_assigned', updated_at = NOW()
        WHERE id = $2 AND agent_id IS NULL AND status = 'pending'
        RETURNING *`,
-    [agentId, req.params.id],
+    [agentId, orderId],
   );
   if (rows.length === 0) return res.status(409).json({ error: 'job_unavailable' });
+
+  // Win the offer and cancel siblings so the other addressees stop seeing it.
+  await query(
+    `UPDATE job_offers SET status = 'accepted', resolved_at = NOW()
+       WHERE id = $1`,
+    [offerRows[0].id],
+  );
+  await cancelOpenOffers(orderId, agentId);
+
   await query(
     `INSERT INTO order_status_history (order_id, status, changed_by_type, changed_by_id) VALUES ($1, 'agent_assigned', 'agent', $2)`,
-    [req.params.id, agentId],
+    [orderId, agentId],
   );
-  notifyOrderEvent(req.params.id, 'agent_assigned');
+  notifyOrderEvent(orderId, 'agent_assigned');
   res.json(rows[0]);
+});
+
+router.post('/jobs/:id/decline', requireAuth(['agent']), async (req, res) => {
+  const agentId = (req.principal as any).agentId;
+  const orderId = req.params.id;
+  const { rowCount } = await query(
+    `UPDATE job_offers SET status = 'declined', resolved_at = NOW()
+       WHERE order_id = $1 AND agent_id = $2 AND status = 'offered'`,
+    [orderId, agentId],
+  );
+  if ((rowCount ?? 0) === 0) return res.status(404).json({ error: 'no_offer' });
+
+  // Fire-and-forget re-dispatch so the freed slot gets backfilled with the
+  // next-nearest eligible agent. The sweeper would catch it within 10s
+  // anyway; doing it now keeps the queue snappy when an agent is browsing.
+  void dispatchOrder(orderId);
+
+  res.json({ ok: true });
 });
 
 const ALLOWED_TRANSITIONS: Record<string, string[]> = {
@@ -202,7 +279,7 @@ router.post('/location', requireAuth(['agent']), async (req, res) => {
   const parsed = z.object({ lat: z.number(), lng: z.number() }).safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: 'invalid_input' });
   await query(
-    `UPDATE agents SET current_lat = $1, current_lng = $2 WHERE id = $3`,
+    `UPDATE agents SET current_lat = $1, current_lng = $2, last_location_at = NOW() WHERE id = $3`,
     [parsed.data.lat, parsed.data.lng, agentId],
   );
   res.json({ ok: true });
