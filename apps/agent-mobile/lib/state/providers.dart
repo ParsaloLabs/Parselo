@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io' show Platform;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
@@ -11,6 +12,7 @@ import '../services/agent_service.dart';
 import '../services/auth_service.dart';
 import '../services/directions_service.dart';
 import '../services/location_service.dart';
+import '../services/push_service.dart';
 
 // ─── Foundation ──────────────────────────────────────────────────────────────
 
@@ -45,30 +47,49 @@ enum AuthStatus { unknown, signedIn, signedOut }
 
 class AuthStateNotifier extends StateNotifier<AuthStatus> {
   final AuthService _auth;
+  final AgentService _agent;
 
-  AuthStateNotifier(this._auth) : super(AuthStatus.unknown) {
+  AuthStateNotifier(this._auth, this._agent) : super(AuthStatus.unknown) {
     _bootstrap();
   }
 
   Future<void> _bootstrap() async {
     final signedIn = await _auth.hasSession();
     state = signedIn ? AuthStatus.signedIn : AuthStatus.signedOut;
+    if (signedIn) unawaited(_syncPushToken());
   }
 
   Future<void> login(String phone, String password) async {
     await _auth.login(phone, password);
     state = AuthStatus.signedIn;
+    unawaited(_syncPushToken());
   }
 
   Future<void> logout() async {
+    final token = pushService.currentToken;
+    if (token != null) {
+      unawaited(_agent.unregisterDeviceToken(token));
+    }
     await _auth.logout();
     state = AuthStatus.signedOut;
+  }
+
+  /// POST the current FCM token to the API so the backend can target this
+  /// device. Safe to call even if push isn't ready yet — bails silently.
+  Future<void> _syncPushToken() async {
+    final token = pushService.currentToken;
+    if (token == null || token.isEmpty) return;
+    final platform = Platform.isIOS ? 'ios' : 'android';
+    await _agent.registerDeviceToken(token, platform);
   }
 }
 
 final authStateProvider =
     StateNotifierProvider<AuthStateNotifier, AuthStatus>((ref) {
-  return AuthStateNotifier(ref.read(authServiceProvider));
+  return AuthStateNotifier(
+    ref.read(authServiceProvider),
+    ref.read(agentServiceProvider),
+  );
 });
 
 // ─── Agent profile (loaded once on sign-in) ──────────────────────────────────

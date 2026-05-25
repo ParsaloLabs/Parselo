@@ -73,6 +73,26 @@ class AgentService {
     }
   }
 
+  Future<void> registerDeviceToken(String token, String platform) async {
+    try {
+      await _api.dio.post(
+        '/agent/device-token',
+        data: {'token': token, 'platform': platform},
+      );
+    } on DioException catch (_) {
+      // Token registration is best-effort: if it fails the agent still
+      // sees offers via the 8s dashboard poll. Don't block the UI.
+    }
+  }
+
+  Future<void> unregisterDeviceToken(String token) async {
+    try {
+      await _api.dio.delete('/agent/device-token', data: {'token': token});
+    } on DioException catch (_) {
+      // Logout proceeds regardless of unregister success.
+    }
+  }
+
   Future<void> acceptJob(String id) async {
     try {
       await _api.dio.post('/agent/jobs/$id/accept');
