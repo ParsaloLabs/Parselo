@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "57253687021",
+    "project_id": "parsalo-labs",
+    "storage_bucket": "parsalo-labs.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:57253687021:android:330efae17da8a319fc26e4",
+        "android_client_info": {
+          "package_name": "in.parsalo.parsalo_agent"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDz-9OKCRS_kXzrnMQKvxgSgAu5YvsDaVg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

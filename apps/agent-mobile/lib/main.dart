@@ -1,17 +1,26 @@
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/theme.dart';
 import 'router.dart';
+import 'services/push_service.dart';
 import 'state/providers.dart';
 
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
     statusBarColor: Colors.transparent,
     statusBarIconBrightness: Brightness.dark,
   ));
+
+  await Firebase.initializeApp();
+  FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+  await pushService.init();
+  debugLogPushToken();
+
   runApp(const ProviderScope(child: ParsaloAgentApp()));
 }
 
@@ -30,6 +39,18 @@ class _ParsaloAgentAppState extends ConsumerState<ParsaloAgentApp> {
     api.onUnauthorized = () {
       ref.read(authStateProvider.notifier).logout();
     };
+    // Route notification taps. Offers live on /dashboard; if a future push
+    // carries `orderId`, deep-link straight to job detail.
+    pushService.taps.listen((msg) {
+      if (!mounted) return;
+      final router = ref.read(routerProvider);
+      final orderId = msg.data['orderId'];
+      if (orderId != null && orderId.isNotEmpty) {
+        router.go('/dashboard/jobs/$orderId');
+      } else {
+        router.go('/dashboard');
+      }
+    });
   }
 
   @override
