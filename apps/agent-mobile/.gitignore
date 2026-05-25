@@ -43,3 +43,6 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Xcode SwiftPM caches (auto-generated, never user-edited)
+**/xcshareddata/swiftpm/
