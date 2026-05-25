@@ -55,7 +55,8 @@ router.post('/orders/:id/assign-agent', requireAuth(['admin']), async (req, res)
 
 router.get('/agents', requireAuth(['admin']), async (_req, res) => {
   const { rows } = await query(
-    `SELECT id, phone, full_name, vehicle_type, is_online, is_active, rating, total_deliveries, current_lat, current_lng FROM agents ORDER BY created_at DESC`,
+    `SELECT id, phone, full_name, vehicle_type, vehicle_number, status, is_online, is_active, rating, total_deliveries, current_lat, current_lng
+       FROM agents WHERE status = 'approved' ORDER BY created_at DESC`,
   );
   res.json(rows);
 });
@@ -74,11 +75,49 @@ router.post('/agents', requireAuth(['admin']), async (req, res) => {
   const a = parsed.data;
   const hash = await bcrypt.hash(a.password, 10);
   const { rows } = await query(
-    `INSERT INTO agents (phone, full_name, email, password_hash, vehicle_type, vehicle_number)
-       VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, phone, full_name`,
+    `INSERT INTO agents (phone, full_name, email, password_hash, vehicle_type, vehicle_number, status, is_active)
+       VALUES ($1, $2, $3, $4, $5, $6, 'approved', TRUE) RETURNING id, phone, full_name`,
     [a.phone, a.full_name, a.email ?? null, hash, a.vehicle_type ?? null, a.vehicle_number ?? null],
   );
   res.status(201).json(rows[0]);
+});
+
+router.get('/agents/pending', requireAuth(['admin']), async (_req, res) => {
+  const { rows } = await query(
+    `SELECT id, phone, full_name, email, vehicle_type, vehicle_number, dl_number, city, status, rejection_reason, created_at
+       FROM agents WHERE status IN ('pending', 'rejected') ORDER BY created_at DESC`,
+  );
+  res.json(rows);
+});
+
+router.post('/agents/:id/approve', requireAuth(['admin']), async (req, res) => {
+  const adminId = (req.principal as any).adminId;
+  const { rows } = await query(
+    `UPDATE agents
+        SET status = 'approved', is_active = TRUE, rejection_reason = NULL,
+            reviewed_at = NOW(), reviewed_by = $1
+      WHERE id = $2 AND status IN ('pending', 'rejected')
+      RETURNING id, status`,
+    [adminId, req.params.id],
+  );
+  if (rows.length === 0) return res.status(409).json({ error: 'cannot_approve' });
+  res.json(rows[0]);
+});
+
+router.post('/agents/:id/reject', requireAuth(['admin']), async (req, res) => {
+  const adminId = (req.principal as any).adminId;
+  const parsed = z.object({ reason: z.string().trim().min(1).max(500) }).safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: 'invalid_input' });
+  const { rows } = await query(
+    `UPDATE agents
+        SET status = 'rejected', is_active = FALSE, rejection_reason = $1,
+            reviewed_at = NOW(), reviewed_by = $2
+      WHERE id = $3 AND status = 'pending'
+      RETURNING id, status`,
+    [parsed.data.reason, adminId, req.params.id],
+  );
+  if (rows.length === 0) return res.status(409).json({ error: 'cannot_reject' });
+  res.json(rows[0]);
 });
 
 // Re-queue a failed order. `when='today'` makes it immediately available again;

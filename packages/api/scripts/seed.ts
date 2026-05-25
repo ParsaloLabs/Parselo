@@ -25,8 +25,8 @@ async function main() {
   const agentPass = process.env.SEED_AGENT_PASSWORD ?? 'agent1234';
   const agentHash = await bcrypt.hash(agentPass, 10);
   await pool.query(
-    `INSERT INTO agents (phone, full_name, password_hash, vehicle_type, vehicle_number)
-     VALUES ($1, 'Test Agent', $2, 'bike', 'KL-08-AA-1234')
+    `INSERT INTO agents (phone, full_name, password_hash, vehicle_type, vehicle_number, status)
+     VALUES ($1, 'Test Agent', $2, 'bike', 'KL-08-AA-1234', 'approved')
      ON CONFLICT (phone) DO NOTHING`,
     [agentPhone, agentHash],
   );

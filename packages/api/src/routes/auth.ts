@@ -53,21 +53,51 @@ router.post('/verify-otp', async (req, res) => {
   return res.json({ token: signUserToken(userId), user_id: userId });
 });
 
+router.post('/agent/register', async (req, res) => {
+  const schema = z.object({
+    phone: phoneSchema,
+    full_name: z.string().trim().min(2),
+    email: z.string().email().optional().or(z.literal('').transform(() => undefined)),
+    password: z.string().min(6),
+    vehicle_type: z.enum(['bike', 'scooter']),
+    vehicle_number: z.string().trim().min(4),
+    dl_number: z.string().trim().min(4),
+    city: z.string().trim().min(2),
+  });
+  const parsed = schema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: 'invalid_input' });
+  const a = parsed.data;
+
+  const dup = await query<{ id: string }>(`SELECT id FROM agents WHERE phone = $1`, [a.phone]);
+  if (dup.rows.length > 0) return res.status(409).json({ error: 'phone_in_use' });
+
+  const hash = await bcrypt.hash(a.password, 10);
+  await query(
+    `INSERT INTO agents (phone, full_name, email, password_hash, vehicle_type, vehicle_number, dl_number, city, status, is_active)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'pending', FALSE)`,
+    [a.phone, a.full_name, a.email ?? null, hash, a.vehicle_type, a.vehicle_number, a.dl_number, a.city],
+  );
+  return res.status(201).json({ ok: true, status: 'pending' });
+});
+
 router.post('/agent/login', async (req, res) => {
   const parsed = z.object({ phone: phoneSchema, password: z.string().min(6) }).safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: 'invalid_input' });
   const { phone, password } = parsed.data;
 
-  const { rows } = await query<{ id: string; password_hash: string; is_active: boolean }>(
-    `SELECT id, password_hash, is_active FROM agents WHERE phone = $1`,
+  const { rows } = await query<{ id: string; password_hash: string; is_active: boolean; status: string }>(
+    `SELECT id, password_hash, is_active, status FROM agents WHERE phone = $1`,
     [phone],
   );
   if (rows.length === 0) return res.status(401).json({ error: 'invalid_credentials' });
   const agent = rows[0];
-  if (!agent.is_active) return res.status(403).json({ error: 'agent_suspended' });
 
   const ok = await bcrypt.compare(password, agent.password_hash);
   if (!ok) return res.status(401).json({ error: 'invalid_credentials' });
+
+  if (agent.status === 'pending') return res.status(403).json({ error: 'agent_pending_approval' });
+  if (agent.status === 'rejected') return res.status(403).json({ error: 'agent_rejected' });
+  if (!agent.is_active) return res.status(403).json({ error: 'agent_suspended' });
 
   return res.json({ token: signAgentToken(agent.id), agent_id: agent.id });
 });
