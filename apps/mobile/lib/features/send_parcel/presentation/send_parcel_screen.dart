@@ -19,10 +19,24 @@ class _SendParcelScreenState extends State<SendParcelScreen> {
   final SendParcelNotifier _notifier = SendParcelNotifier();
   final _formKey1 = GlobalKey<FormState>();
 
+  final TextEditingController _pickupAddressCtrl = TextEditingController();
+  final TextEditingController _pickupPincodeCtrl = TextEditingController();
+  final TextEditingController _deliveryAddressCtrl = TextEditingController();
+  final TextEditingController _deliveryPincodeCtrl = TextEditingController();
+
   @override
   void initState() {
     super.initState();
     _notifier.fetchSavedAddresses();
+  }
+
+  @override
+  void dispose() {
+    _pickupAddressCtrl.dispose();
+    _pickupPincodeCtrl.dispose();
+    _deliveryAddressCtrl.dispose();
+    _deliveryPincodeCtrl.dispose();
+    super.dispose();
   }
 
   @override
@@ -121,10 +135,17 @@ class _SendParcelScreenState extends State<SendParcelScreen> {
                       onPressed: () async {
                         final loc = await showDialog<PickedLocation>(
                           context: context,
-                          builder: (context) => const MapSelectionDialog(title: 'Pin Pickup Spot'),
+                          builder: (context) => MapSelectionDialog(
+                            title: 'Pin Pickup Spot',
+                            initialLocation: _notifier.pickupPin,
+                          ),
                         );
                         if (loc != null) {
                           _notifier.setPickupPin(loc);
+                          if (_pickupPincodeCtrl.text.trim().isEmpty && loc.pincode.isNotEmpty) {
+                            _pickupPincodeCtrl.text = loc.pincode;
+                            _notifier.setNewPickupPincode(loc.pincode);
+                          }
                         }
                       },
                       style: OutlinedButton.styleFrom(
@@ -133,22 +154,49 @@ class _SendParcelScreenState extends State<SendParcelScreen> {
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                       ),
                       icon: const Icon(Icons.map_rounded, color: AppColors.brand, size: 18),
-                      label: const Text('Pin location on Google Maps', style: TextStyle(color: AppColors.brand, fontWeight: FontWeight.bold, fontSize: 13)),
+                      label: Text(
+                        _notifier.pickupPin == null ? 'Pin location on Google Maps' : 'Re-pin location on Google Maps',
+                        style: const TextStyle(color: AppColors.brand, fontWeight: FontWeight.bold, fontSize: 13),
+                      ),
                     ),
+                    if (_notifier.pickupPin != null) ...[
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: AppColors.background,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: AppColors.border),
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Icon(Icons.location_on_rounded, color: AppColors.brand, size: 16),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: Text(
+                                _notifier.pickupPin!.fullAddress,
+                                style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 14),
                     TextFormField(
-                      initialValue: _notifier.newPickupAddress,
+                      controller: _pickupAddressCtrl,
                       onChanged: _notifier.setNewPickupAddress,
                       maxLines: 2,
                       decoration: const InputDecoration(
-                        labelText: 'House/flat, street, area',
-                        hintText: 'Add pickup address details',
+                        labelText: 'Address line 1',
+                        hintText: 'House/flat, street, area — as you want on the courier label',
                       ),
                       validator: (val) => val == null || val.trim().isEmpty ? 'Pickup address is required' : null,
                     ),
                     const SizedBox(height: 12),
                     TextFormField(
-                      initialValue: _notifier.newPickupPincode,
+                      controller: _pickupPincodeCtrl,
                       onChanged: _notifier.setNewPickupPincode,
                       keyboardType: TextInputType.number,
                       maxLength: 6,
@@ -258,10 +306,17 @@ class _SendParcelScreenState extends State<SendParcelScreen> {
                     onPressed: () async {
                       final loc = await showDialog<PickedLocation>(
                         context: context,
-                        builder: (context) => const MapSelectionDialog(title: 'Pin Delivery Spot'),
+                        builder: (context) => MapSelectionDialog(
+                          title: 'Pin Delivery Spot',
+                          initialLocation: _notifier.deliveryPin,
+                        ),
                       );
                       if (loc != null) {
                         _notifier.setDeliveryPin(loc);
+                        if (_deliveryPincodeCtrl.text.trim().isEmpty && loc.pincode.isNotEmpty) {
+                          _deliveryPincodeCtrl.text = loc.pincode;
+                          _notifier.setDeliveryPincode(loc.pincode);
+                        }
                       }
                     },
                     style: OutlinedButton.styleFrom(
@@ -270,19 +325,49 @@ class _SendParcelScreenState extends State<SendParcelScreen> {
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                     ),
                     icon: const Icon(Icons.map_rounded, color: AppColors.accent, size: 18),
-                    label: const Text('Pin location on Google Maps', style: TextStyle(color: AppColors.accent, fontWeight: FontWeight.bold, fontSize: 13)),
+                    label: Text(
+                      _notifier.deliveryPin == null ? 'Pin location on Google Maps' : 'Re-pin location on Google Maps',
+                      style: const TextStyle(color: AppColors.accent, fontWeight: FontWeight.bold, fontSize: 13),
+                    ),
                   ),
+                  if (_notifier.deliveryPin != null) ...[
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: AppColors.background,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: AppColors.border),
+                      ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Icon(Icons.location_on_rounded, color: AppColors.accent, size: 16),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              _notifier.deliveryPin!.fullAddress,
+                              style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 14),
                   TextFormField(
-                    initialValue: _notifier.deliveryAddress,
+                    controller: _deliveryAddressCtrl,
                     maxLines: 2,
-                    decoration: const InputDecoration(labelText: 'Delivery address details'),
+                    decoration: const InputDecoration(
+                      labelText: 'Address line 1',
+                      hintText: 'House/flat, street, area — as you want on the courier label',
+                    ),
                     validator: (val) => val == null || val.trim().isEmpty ? 'Address details are required' : null,
                     onChanged: _notifier.setDeliveryAddress,
                   ),
                   const SizedBox(height: 12),
                   TextFormField(
-                    initialValue: _notifier.deliveryPincode,
+                    controller: _deliveryPincodeCtrl,
                     keyboardType: TextInputType.number,
                     maxLength: 6,
                     decoration: const InputDecoration(labelText: 'Delivery pincode', counterText: ''),

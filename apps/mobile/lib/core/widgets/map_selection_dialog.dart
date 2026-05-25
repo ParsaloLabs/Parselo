@@ -19,8 +19,13 @@ class PickedLocation {
 
 class MapSelectionDialog extends StatefulWidget {
   final String title;
+  final PickedLocation? initialLocation;
 
-  const MapSelectionDialog({Key? key, this.title = 'Select Location'}) : super(key: key);
+  const MapSelectionDialog({
+    Key? key,
+    this.title = 'Select Location',
+    this.initialLocation,
+  }) : super(key: key);
 
   @override
   State<MapSelectionDialog> createState() => _MapSelectionDialogState();
@@ -28,10 +33,25 @@ class MapSelectionDialog extends StatefulWidget {
 
 class _MapSelectionDialogState extends State<MapSelectionDialog> {
   late GoogleMapController _mapController;
-  LatLng _selectedLatLng = const LatLng(10.5276, 76.2144); // Thrissur Center
+  late LatLng _selectedLatLng;
   bool _loadingAddress = false;
-  String _currentAddress = 'Thrissur, Kerala';
-  String _currentPincode = '680001';
+  late String _currentAddress;
+  late String _currentPincode;
+
+  @override
+  void initState() {
+    super.initState();
+    final init = widget.initialLocation;
+    if (init != null) {
+      _selectedLatLng = LatLng(init.lat, init.lng);
+      _currentAddress = init.fullAddress;
+      _currentPincode = init.pincode;
+    } else {
+      _selectedLatLng = const LatLng(10.5276, 76.2144); // Thrissur Center
+      _currentAddress = 'Thrissur, Kerala';
+      _currentPincode = '680001';
+    }
+  }
 
   void _onCameraMove(CameraPosition position) {
     setState(() {

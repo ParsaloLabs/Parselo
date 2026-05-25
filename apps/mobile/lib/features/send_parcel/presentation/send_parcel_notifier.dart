@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../../core/config/pricing_config.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/widgets/map_selection_dialog.dart';
 
@@ -120,10 +119,10 @@ class SendParcelNotifier extends ChangeNotifier {
   List<CourierQuote> get quotes => _quotes;
   CourierQuote? get selectedQuote => _selectedQuote;
 
-  // Pricing helper — sourced from PricingConfig (filled by /config/pricing).
+  // Pricing helper
   int get courierCharge => _selectedQuote?.pricePaise ?? 0;
-  int get serviceFee => PricingConfig.instance.sendBaseServiceFeePaise;
-  int get gst => (serviceFee * PricingConfig.instance.gstRate).round();
+  int get serviceFee => 4900;
+  int get gst => (serviceFee * 0.18).round();
   int get totalAmount => courierCharge + serviceFee + gst;
 
   // Setters
@@ -150,7 +149,6 @@ class SendParcelNotifier extends ChangeNotifier {
   void setPickupPin(PickedLocation? loc) {
     _pickupPin = loc;
     if (loc != null) {
-      if (_newPickupAddress.isEmpty) _newPickupAddress = loc.fullAddress;
       if (_newPickupPincode.isEmpty) _newPickupPincode = loc.pincode;
     }
     notifyListeners();
@@ -199,7 +197,6 @@ class SendParcelNotifier extends ChangeNotifier {
   void setDeliveryPin(PickedLocation? loc) {
     _deliveryPin = loc;
     if (loc != null) {
-      if (_deliveryAddress.isEmpty) _deliveryAddress = loc.fullAddress;
       if (_deliveryPincode.isEmpty) _deliveryPincode = loc.pincode;
     }
     notifyListeners();

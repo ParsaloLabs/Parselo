@@ -21,10 +21,20 @@ class _ReceiveParcelScreenState extends State<ReceiveParcelScreen> {
   final _formKey = GlobalKey<FormState>();
   final GlobalKey<SignaturePadState> _sigKey = GlobalKey<SignaturePadState>();
 
+  final TextEditingController _deliveryAddressCtrl = TextEditingController();
+  final TextEditingController _deliveryPincodeCtrl = TextEditingController();
+
   @override
   void initState() {
     super.initState();
     _notifier.initData();
+  }
+
+  @override
+  void dispose() {
+    _deliveryAddressCtrl.dispose();
+    _deliveryPincodeCtrl.dispose();
+    super.dispose();
   }
 
   void _submit() async {
@@ -182,10 +192,17 @@ class _ReceiveParcelScreenState extends State<ReceiveParcelScreen> {
                             onPressed: () async {
                               final loc = await showDialog<PickedLocation>(
                                 context: context,
-                                builder: (context) => const MapSelectionDialog(title: 'Pin Delivery Spot'),
+                                builder: (context) => MapSelectionDialog(
+                                  title: 'Pin Delivery Spot',
+                                  initialLocation: _notifier.deliveryPin,
+                                ),
                               );
                               if (loc != null) {
                                 _notifier.setDeliveryPin(loc);
+                                if (_deliveryPincodeCtrl.text.trim().isEmpty && loc.pincode.isNotEmpty) {
+                                  _deliveryPincodeCtrl.text = loc.pincode;
+                                  _notifier.setNewDeliveryPincode(loc.pincode);
+                                }
                               }
                             },
                             style: OutlinedButton.styleFrom(
@@ -194,19 +211,49 @@ class _ReceiveParcelScreenState extends State<ReceiveParcelScreen> {
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                             ),
                             icon: const Icon(Icons.map_rounded, color: AppColors.accent, size: 18),
-                            label: const Text('Pin location on Google Maps', style: TextStyle(color: AppColors.accent, fontWeight: FontWeight.bold, fontSize: 13)),
+                            label: Text(
+                              _notifier.deliveryPin == null ? 'Pin location on Google Maps' : 'Re-pin location on Google Maps',
+                              style: const TextStyle(color: AppColors.accent, fontWeight: FontWeight.bold, fontSize: 13),
+                            ),
                           ),
+                          if (_notifier.deliveryPin != null) ...[
+                            const SizedBox(height: 8),
+                            Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: AppColors.background,
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: AppColors.border),
+                              ),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Icon(Icons.location_on_rounded, color: AppColors.accent, size: 16),
+                                  const SizedBox(width: 6),
+                                  Expanded(
+                                    child: Text(
+                                      _notifier.deliveryPin!.fullAddress,
+                                      style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
                           const SizedBox(height: 14),
                           TextFormField(
-                            initialValue: _notifier.newDeliveryAddress,
+                            controller: _deliveryAddressCtrl,
                             onChanged: _notifier.setNewDeliveryAddress,
                             maxLines: 2,
-                            decoration: const InputDecoration(labelText: 'House/flat, street, area'),
+                            decoration: const InputDecoration(
+                              labelText: 'Address line 1',
+                              hintText: 'House/flat, street, area — as you want on the courier label',
+                            ),
                             validator: (val) => val == null || val.trim().isEmpty ? 'Delivery address is required' : null,
                           ),
                           const SizedBox(height: 12),
                           TextFormField(
-                            initialValue: _notifier.newDeliveryPincode,
+                            controller: _deliveryPincodeCtrl,
                             onChanged: _notifier.setNewDeliveryPincode,
                             keyboardType: TextInputType.number,
                             maxLength: 6,
