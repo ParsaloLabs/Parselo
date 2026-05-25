@@ -38,8 +38,11 @@ class PushService {
 
   /// Re-fetches the token from Firebase. Use this instead of [currentToken]
   /// when you need a guaranteed value — on a cold launch the cached field
-  /// may still be null while FCM is finishing registration.
+  /// may still be null while FCM is finishing registration. Returns null
+  /// (without throwing) when push was never initialised, e.g. on iOS where
+  /// Firebase init is skipped pending an Apple Dev Program + plist.
   Future<String?> ensureToken() async {
+    if (!_ready) return null;
     _token ??= await FirebaseMessaging.instance.getToken();
     return _token;
   }

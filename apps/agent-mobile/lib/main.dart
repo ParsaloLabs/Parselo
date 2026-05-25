@@ -1,5 +1,6 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -16,10 +17,20 @@ Future<void> main() async {
     statusBarIconBrightness: Brightness.dark,
   ));
 
-  await Firebase.initializeApp();
-  FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
-  await pushService.init();
-  debugLogPushToken();
+  // Firebase is wired for Android only — iOS needs GoogleService-Info.plist
+  // + an APNs key (Apple Developer Program). On iOS today initializeApp()
+  // throws "[core/no-app]" before runApp, leaving a white screen. Catch it
+  // so the rest of the app still loads; iOS will light up automatically
+  // once the plist is dropped into ios/Runner/.
+  try {
+    await Firebase.initializeApp();
+    FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+    await pushService.init();
+    debugLogPushToken();
+  } catch (e, st) {
+    debugPrint('[push] init skipped: $e');
+    if (kDebugMode) debugPrintStack(stackTrace: st, label: '[push]');
+  }
 
   runApp(const ProviderScope(child: ParsaloAgentApp()));
 }
