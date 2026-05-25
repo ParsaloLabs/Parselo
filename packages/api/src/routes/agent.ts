@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { query } from '../db';
 import { requireAuth } from '../auth';
 import { notifyOrderEvent } from '../notifications';
+import { sendPushToAgent } from '../push';
 
 const router = Router();
 
@@ -204,6 +205,36 @@ router.post('/location', requireAuth(['agent']), async (req, res) => {
     `UPDATE agents SET current_lat = $1, current_lng = $2 WHERE id = $3`,
     [parsed.data.lat, parsed.data.lng, agentId],
   );
+  res.json({ ok: true });
+});
+
+// Device-token registration for FCM pushes. Called from the agent app right
+// after sign-in and on token rotation. Upsert on (token) — if the device
+// is re-used by a different agent the row moves to the new owner.
+router.post('/device-token', requireAuth(['agent']), async (req, res) => {
+  const agentId = (req.principal as any).agentId;
+  const parsed = z.object({
+    token: z.string().min(20),
+    platform: z.enum(['android', 'ios']),
+  }).safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: 'invalid_input' });
+  await query(
+    `INSERT INTO agent_devices (agent_id, token, platform)
+       VALUES ($1, $2, $3)
+       ON CONFLICT (token) DO UPDATE SET agent_id = EXCLUDED.agent_id,
+                                          platform = EXCLUDED.platform,
+                                          updated_at = NOW()`,
+    [agentId, parsed.data.token, parsed.data.platform],
+  );
+  res.json({ ok: true });
+});
+
+router.delete('/device-token', requireAuth(['agent']), async (req, res) => {
+  const agentId = (req.principal as any).agentId;
+  const parsed = z.object({ token: z.string().min(20) }).safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: 'invalid_input' });
+  await query(`DELETE FROM agent_devices WHERE token = $1 AND agent_id = $2`,
+    [parsed.data.token, agentId]);
   res.json({ ok: true });
 });
 

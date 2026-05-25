@@ -1,5 +1,6 @@
 import { env } from './env';
 import { query } from './db';
+import { sendPushToAgent, sendPushToOnlineAgents } from './push';
 
 const DEV = !env.MSG91_AUTH_KEY;
 
@@ -111,25 +112,54 @@ export async function notifyOrderEvent(orderId: string, event: OrderEvent) {
     if (cust) await sendSms(o.user_phone, cust);
     const agt = agentMessage(o, event);
     if (agt && o.agent_phone) await sendSms(o.agent_phone, agt);
+
+    // Push the assigned agent's device(s) when admin assigns directly. Self-
+    // accept doesn't need a push — the agent is already in-app and we want
+    // to avoid notifying their own action back at them.
+    if (event === 'agent_assigned') {
+      const { rows } = await query<{ agent_id: string | null }>(
+        `SELECT agent_id FROM orders WHERE id = $1`,
+        [orderId],
+      );
+      const agentId = rows[0]?.agent_id;
+      if (agentId) {
+        await sendPushToAgent(agentId, {
+          title: `New job — ${o.order_code}`,
+          body: `${o.order_type === 'send' ? 'Dispatch send' : 'Partner collect'} · ₹${Math.round(o.total_amount / 100)}`,
+          data: { orderId, kind: 'assigned' },
+        });
+      }
+    }
   } catch (e) {
     console.warn('[notify] failed', e);
   }
 }
 
 // Broadcast a "new job available" ping to all currently-online agents.
-// Used when an order becomes paid + dispatchable.
+// Used when an order becomes paid + dispatchable. Goes out as both SMS
+// (legacy fallback) and FCM push (primary channel — wakes the app, can
+// fire the offer chime, survives the agent being mid-navigation).
 export async function notifyAgentsNewJob(orderId: string) {
   try {
-    const { rows: orderRows } = await query<{ order_code: string; order_type: string }>(
-      `SELECT order_code, order_type FROM orders WHERE id = $1`, [orderId],
+    const { rows: orderRows } = await query<{
+      order_code: string; order_type: string; total_amount: number;
+    }>(
+      `SELECT order_code, order_type, total_amount FROM orders WHERE id = $1`, [orderId],
     );
     if (orderRows.length === 0) return;
     const o = orderRows[0];
+
     const { rows: agents } = await query<{ phone: string }>(
       `SELECT phone FROM agents WHERE is_online = TRUE AND is_active = TRUE`,
     );
     const msg = `Parsalo: New ${o.order_type} job ${o.order_code} available. Open the app to accept.`;
     await Promise.all(agents.map((a) => sendSms(a.phone, msg)));
+
+    await sendPushToOnlineAgents({
+      title: 'New offer near you',
+      body: `${o.order_type === 'send' ? 'Dispatch send' : 'Partner collect'} ${o.order_code} · ₹${Math.round(o.total_amount / 100)} · Tap to view`,
+      data: { orderId, kind: 'available' },
+    });
   } catch (e) {
     console.warn('[notify:broadcast] failed', e);
   }
