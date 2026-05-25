@@ -11,7 +11,7 @@ router.post('/', async (req, res) => {
     from_pincode: z.string().min(4).max(10),
     to_pincode: z.string().min(4).max(10),
     weight_kg: z.number().min(0.1).max(50),
-    parcel_type: z.string().optional(),
+    parcel_type: z.string().optional().nullable(),
   });
   const parsed = schema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: 'invalid_input' });

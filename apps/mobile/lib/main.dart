@@ -1,0 +1,58 @@
+import 'package:flutter/material.dart';
+import 'core/storage/token_store.dart';
+import 'core/theme/theme.dart';
+import 'features/auth/presentation/auth_notifier.dart';
+import 'features/auth/presentation/login_screen.dart';
+import 'features/dashboard/presentation/dashboard_notifier.dart';
+import 'features/dashboard/presentation/home_screen.dart';
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await TokenStore.init();
+  runApp(const MyApp());
+}
+
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Parsalo',
+      debugShowCheckedModeBanner: false,
+      theme: AppTheme.lightTheme,
+      home: const AppRoot(),
+    );
+  }
+}
+
+class AppRoot extends StatefulWidget {
+  const AppRoot({super.key});
+
+  @override
+  State<AppRoot> createState() => _AppRootState();
+}
+
+class _AppRootState extends State<AppRoot> {
+  final AuthNotifier _authNotifier = AuthNotifier();
+  final DashboardNotifier _dashboardNotifier = DashboardNotifier();
+
+  @override
+  Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: _authNotifier,
+      builder: (context, _) {
+        if (_authNotifier.isAuthenticated) {
+          return HomeScreen(
+            authNotifier: _authNotifier,
+            dashboardNotifier: _dashboardNotifier,
+          );
+        } else {
+          return LoginScreen(
+            authNotifier: _authNotifier,
+          );
+        }
+      },
+    );
+  }
+}

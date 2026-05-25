@@ -11,7 +11,7 @@ export const pool = new Pool({
   ssl: process.env.PGSSL === 'true' ? { rejectUnauthorized: false } : undefined,
 });
 
-export async function query<T = any>(text: string, params?: any[]): Promise<{ rows: T[] }> {
+export async function query<T = any>(text: string, params?: any[]): Promise<{ rows: T[]; rowCount: number | null }> {
   const res = await pool.query(text, params);
-  return { rows: res.rows as T[] };
+  return { rows: res.rows as T[], rowCount: res.rowCount };
 }
