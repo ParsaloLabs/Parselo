@@ -71,12 +71,12 @@ export default function LandingPage() {
         </div>
       </header>
 
-      <main className="flex-1 max-w-6xl mx-auto px-6 py-16 grid md:grid-cols-2 gap-12 items-center">
-        <div>
-          <h1 className="text-4xl md:text-5xl font-bold leading-tight">
+      <main className="flex-1 max-w-6xl mx-auto px-6 py-6 md:py-16 grid md:grid-cols-2 gap-8 md:gap-12 items-center">
+        <div className="order-2 md:order-1">
+          <h1 className="text-3xl md:text-5xl font-bold leading-tight">
             Skip the courier queue.
           </h1>
-          <p className="text-lg text-slate-600 mt-4 leading-relaxed">
+          <p className="text-base md:text-lg text-slate-600 mt-4 leading-relaxed">
             Book a pickup from your office or home — our agent collects your parcel,
             ships it through the courier you choose, and sends you a tracking ID.
             Or use us to <span className="text-brand font-semibold">collect a parcel</span> stuck
@@ -89,7 +89,7 @@ export default function LandingPage() {
           </ul>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-8">
+        <div className="order-1 md:order-2 bg-white rounded-2xl shadow-lg border border-slate-200 p-6 md:p-8">
           <h2 className="text-xl font-semibold mb-1">
             {step === 'phone' ? 'Sign in to book' : 'Enter the OTP'}
           </h2>

@@ -54,19 +54,19 @@ class _LoginScreenState extends State<LoginScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    const SizedBox(height: 20),
-                    // Logo Image
+                    const SizedBox(height: 8),
+                    // Logo Image (compact)
                     Center(
                       child: Container(
-                        height: 90,
-                        width: 90,
+                        height: 64,
+                        width: 64,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
                           boxShadow: [
                             BoxShadow(
                               color: AppColors.brand.withOpacity(0.15),
-                              blurRadius: 20,
-                              offset: const Offset(0, 8),
+                              blurRadius: 16,
+                              offset: const Offset(0, 6),
                             )
                           ],
                         ),
@@ -78,44 +78,17 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       ),
                     ),
-                    const SizedBox(height: 36),
-                    
-                    // Welcome Slogan
+                    const SizedBox(height: 20),
+
+                    // Welcome Slogan (compact)
                     Text(
-                      'Skip the\ncourier queue.',
-                      style: Theme.of(context).textTheme.headlineLarge,
+                      'Skip the courier queue.',
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.headlineMedium,
                     ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'Book a pickup from your office or home — our agent collects your parcel, ships it through the courier you choose, and sends you a tracking ID. No standing in line.',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: AppColors.textSecondary,
-                        height: 1.5,
-                      ),
-                    ),
-                    const SizedBox(height: 28),
-                    
-                    // Feature List bullets
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: AppColors.border, width: 1),
-                      ),
-                      child: const Column(
-                        children: [
-                          BulletRow(icon: '📤', text: 'Send via DTDC, Delhivery, BlueDart or India Post'),
-                          SizedBox(height: 10),
-                          BulletRow(icon: '📥', text: 'Receive from any courier office on your behalf'),
-                          SizedBox(height: 10),
-                          BulletRow(icon: '📍', text: 'Real-time tracking — see exactly where your agent is'),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 32),
-                    
-                    // Input Card
+                    const SizedBox(height: 20),
+
+                    // Input Card — moved up so it's visible without scrolling
                     Container(
                       padding: const EdgeInsets.all(20),
                       decoration: BoxDecoration(
@@ -143,7 +116,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
                           ),
                           const SizedBox(height: 16),
-                          
+
                           // Mobile Input
                           TextFormField(
                             controller: _phoneController,
@@ -163,7 +136,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               prefixIcon: Icon(Icons.phone_iphone_rounded, color: AppColors.textSecondary),
                             ),
                           ),
-                          
+
                           if (notifier.error != null) ...[
                             const SizedBox(height: 8),
                             Text(
@@ -171,7 +144,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               style: const TextStyle(color: Colors.redAccent, fontSize: 13, fontWeight: FontWeight.w500),
                             ),
                           ],
-                          
+
                           const SizedBox(height: 16),
                           BrandButton(
                             text: 'Send OTP',
@@ -181,11 +154,39 @@ class _LoginScreenState extends State<LoginScreen> {
                         ],
                       ),
                     ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 12),
                     const Text(
                       'By continuing you agree to our Terms and Privacy Policy.',
                       textAlign: TextAlign.center,
                       style: TextStyle(color: AppColors.textMuted, fontSize: 11),
+                    ),
+                    const SizedBox(height: 28),
+
+                    // Description + bullets (below the fold — informational)
+                    Text(
+                      'Book a pickup from your office or home — our agent collects your parcel, ships it through the courier you choose, and sends you a tracking ID. No standing in line.',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: AppColors.textSecondary,
+                        height: 1.5,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: AppColors.border, width: 1),
+                      ),
+                      child: const Column(
+                        children: [
+                          BulletRow(icon: '📤', text: 'Send via DTDC, Delhivery, BlueDart or India Post'),
+                          SizedBox(height: 10),
+                          BulletRow(icon: '📥', text: 'Receive from any courier office on your behalf'),
+                          SizedBox(height: 10),
+                          BulletRow(icon: '📍', text: 'Real-time tracking — see exactly where your agent is'),
+                        ],
+                      ),
                     ),
                   ],
                 ),
