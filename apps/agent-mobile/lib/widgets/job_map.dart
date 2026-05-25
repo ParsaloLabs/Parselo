@@ -16,6 +16,11 @@ class JobMap extends ConsumerStatefulWidget {
   final LatLng? drop;
   final String? dropLabel;
   final bool dropIsActive;
+  final List<LatLng>? routePoints;
+  final String? distanceText;
+  final String? durationText;
+  final bool routeLoading;
+  final String? routeError;
 
   const JobMap({
     super.key,
@@ -24,6 +29,11 @@ class JobMap extends ConsumerStatefulWidget {
     this.drop,
     this.dropLabel,
     this.dropIsActive = false,
+    this.routePoints,
+    this.distanceText,
+    this.durationText,
+    this.routeLoading = false,
+    this.routeError,
   });
 
   @override
@@ -72,6 +82,22 @@ class _JobMapState extends ConsumerState<JobMap> {
       );
     }
     return out;
+  }
+
+  Set<Polyline> _polylines() {
+    final r = widget.routePoints;
+    if (r == null || r.length < 2) return const <Polyline>{};
+    return {
+      Polyline(
+        polylineId: const PolylineId('route'),
+        points: r,
+        width: 5,
+        color: BrandColors.brand,
+        startCap: Cap.roundCap,
+        endCap: Cap.roundCap,
+        jointType: JointType.round,
+      ),
+    };
   }
 
   void _fitBounds(LatLng? agent) {
@@ -140,23 +166,40 @@ class _JobMapState extends ConsumerState<JobMap> {
         children: [
           SizedBox(
             height: 220,
-            child: GoogleMap(
-              initialCameraPosition: CameraPosition(target: center, zoom: 14),
-              markers: _markers(agentLatLng),
-              myLocationButtonEnabled: false,
-              myLocationEnabled: false,
-              zoomControlsEnabled: false,
-              mapToolbarEnabled: false,
-              compassEnabled: false,
-              onMapCreated: (c) {
-                _controller = c;
-                if (!_movedToInitial) {
-                  _movedToInitial = true;
-                  WidgetsBinding.instance.addPostFrameCallback((_) {
-                    _fitBounds(agentLatLng);
-                  });
-                }
-              },
+            child: Stack(
+              children: [
+                GoogleMap(
+                  initialCameraPosition:
+                      CameraPosition(target: center, zoom: 14),
+                  markers: _markers(agentLatLng),
+                  polylines: _polylines(),
+                  myLocationButtonEnabled: false,
+                  myLocationEnabled: false,
+                  zoomControlsEnabled: false,
+                  mapToolbarEnabled: false,
+                  compassEnabled: false,
+                  onMapCreated: (c) {
+                    _controller = c;
+                    if (!_movedToInitial) {
+                      _movedToInitial = true;
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        _fitBounds(agentLatLng);
+                      });
+                    }
+                  },
+                ),
+                Positioned(
+                  top: 10,
+                  left: 10,
+                  right: 10,
+                  child: _RouteChip(
+                    loading: widget.routeLoading,
+                    distanceText: widget.distanceText,
+                    durationText: widget.durationText,
+                    error: widget.routeError,
+                  ),
+                ),
+              ],
             ),
           ),
           Container(
@@ -225,10 +268,10 @@ class _NavButton extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.directions_outlined, color: fg, size: 18),
+                Icon(Icons.open_in_new, color: fg, size: 16),
                 const SizedBox(width: 6),
                 Text(
-                  'Navigate to $label',
+                  'Open $label in Google Maps',
                   style: TextStyle(
                     color: fg,
                     fontSize: 13,
@@ -286,6 +329,123 @@ class _NavOnlyFallback extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Compact pill anchored to the top of the map with distance + ETA, a
+/// loading state, or a short error label. Hidden entirely when nothing is
+/// available to show (e.g. before the first fetch with no error).
+class _RouteChip extends StatelessWidget {
+  final bool loading;
+  final String? distanceText;
+  final String? durationText;
+  final String? error;
+  const _RouteChip({
+    required this.loading,
+    required this.distanceText,
+    required this.durationText,
+    required this.error,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final hasRoute =
+        (distanceText?.isNotEmpty ?? false) && (durationText?.isNotEmpty ?? false);
+    if (!loading && !hasRoute && (error?.isEmpty ?? true)) {
+      return const SizedBox.shrink();
+    }
+
+    final Widget content;
+    if (loading) {
+      content = const Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SizedBox(
+            width: 14,
+            height: 14,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              color: BrandColors.brand,
+            ),
+          ),
+          SizedBox(width: 8),
+          Text(
+            'Finding route…',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: BrandColors.slate700,
+            ),
+          ),
+        ],
+      );
+    } else if (hasRoute) {
+      content = Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.alt_route, size: 14, color: BrandColors.brand),
+          const SizedBox(width: 6),
+          Text(
+            durationText!,
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w800,
+              color: BrandColors.slate800,
+            ),
+          ),
+          const SizedBox(width: 6),
+          Container(width: 1, height: 12, color: BrandColors.slate200),
+          const SizedBox(width: 6),
+          Text(
+            distanceText!,
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: BrandColors.slate600,
+            ),
+          ),
+        ],
+      );
+    } else {
+      content = Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.info_outline, size: 14, color: BrandColors.rose600),
+          const SizedBox(width: 6),
+          Flexible(
+            child: Text(
+              error ?? 'Route unavailable',
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: BrandColors.rose600,
+              ),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      );
+    }
+
+    return Align(
+      alignment: Alignment.topCenter,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: BrandColors.slate200),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.08),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: content,
       ),
     );
   }

@@ -9,6 +9,7 @@ import '../models/agent_profile.dart';
 import '../models/profits.dart';
 import '../services/agent_service.dart';
 import '../services/auth_service.dart';
+import '../services/directions_service.dart';
 import '../services/location_service.dart';
 
 // ─── Foundation ──────────────────────────────────────────────────────────────
@@ -32,6 +33,10 @@ final agentServiceProvider = Provider<AgentService>((ref) {
 
 final locationServiceProvider = Provider<LocationService>((ref) {
   return LocationService(ref.read(agentServiceProvider));
+});
+
+final directionsServiceProvider = Provider<DirectionsService>((ref) {
+  return DirectionsService();
 });
 
 // ─── Auth state ──────────────────────────────────────────────────────────────

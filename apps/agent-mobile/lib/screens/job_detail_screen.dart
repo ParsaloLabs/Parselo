@@ -1,7 +1,9 @@
 import 'dart:io';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:open_filex/open_filex.dart';
@@ -11,6 +13,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../core/api_client.dart';
 import '../core/theme.dart';
 import '../models/order.dart';
+import '../services/directions_service.dart';
 import '../state/providers.dart';
 import '../widgets/failure_sheet.dart';
 import '../widgets/job_map.dart';
@@ -28,10 +31,122 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> {
   bool _busy = false;
   String? _localError;
 
+  DirectionsResult? _route;
+  bool _routeLoading = false;
+  String? _routeError;
+  LatLng? _routeOriginAnchor;
+  LatLng? _routeDestAnchor;
+  DateTime? _lastFetchedAt;
+  bool _fetching = false;
+
   @override
   void dispose() {
     _otpCtrl.dispose();
     super.dispose();
+  }
+
+  LatLng? _activeDestination(AgentOrder o) {
+    final pickupActive =
+        o.status == 'agent_assigned' || o.status == 'agent_en_route_pickup';
+    final lat = pickupActive ? o.pickupLat : o.dropLat;
+    final lng = pickupActive ? o.pickupLng : o.dropLng;
+    if (lat == null || lng == null) return null;
+    return LatLng(lat, lng);
+  }
+
+  static double _haversineMeters(LatLng a, LatLng b) {
+    const r = 6371000.0;
+    final dLat = (b.latitude - a.latitude) * math.pi / 180;
+    final dLng = (b.longitude - a.longitude) * math.pi / 180;
+    final la1 = a.latitude * math.pi / 180;
+    final la2 = b.latitude * math.pi / 180;
+    final h = math.sin(dLat / 2) * math.sin(dLat / 2) +
+        math.cos(la1) * math.cos(la2) * math.sin(dLng / 2) * math.sin(dLng / 2);
+    return 2 * r * math.asin(math.min(1, math.sqrt(h)));
+  }
+
+  /// Decide whether to fire a new Directions call. Throttle to once per
+  /// 60 s unless the destination flips or the agent has moved >200 m since
+  /// the last fetch.
+  bool _shouldRefetch({
+    required LatLng origin,
+    required LatLng destination,
+  }) {
+    if (_fetching) return false;
+    if (_route == null && _routeError == null) return true;
+    final destChanged = _routeDestAnchor == null ||
+        _haversineMeters(_routeDestAnchor!, destination) > 50;
+    if (destChanged) return true;
+    final last = _lastFetchedAt;
+    final elapsedOk =
+        last == null || DateTime.now().difference(last).inSeconds >= 60;
+    final originMoved = _routeOriginAnchor == null ||
+        _haversineMeters(_routeOriginAnchor!, origin) > 200;
+    return elapsedOk && originMoved;
+  }
+
+  Future<void> _maybeFetchRoute(AgentOrder o, Position? agent) async {
+    if (agent == null) return;
+    final dest = _activeDestination(o);
+    if (dest == null) return;
+    final origin = LatLng(agent.latitude, agent.longitude);
+    if (!_shouldRefetch(origin: origin, destination: dest)) return;
+    _fetching = true;
+    if (mounted) {
+      setState(() {
+        _routeLoading = _route == null;
+      });
+    }
+    try {
+      final svc = ref.read(directionsServiceProvider);
+      final res = await svc.fetchRoute(origin: origin, destination: dest);
+      if (!mounted) return;
+      setState(() {
+        _route = res;
+        _routeError = null;
+        _routeLoading = false;
+        _routeOriginAnchor = origin;
+        _routeDestAnchor = dest;
+        _lastFetchedAt = DateTime.now();
+      });
+    } on DirectionsUnavailable catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _routeError = _humanRouteError(e.reason);
+        _routeLoading = false;
+        _routeOriginAnchor = origin;
+        _routeDestAnchor = dest;
+        _lastFetchedAt = DateTime.now();
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _routeError = 'Route unavailable';
+        _routeLoading = false;
+        _routeOriginAnchor = origin;
+        _routeDestAnchor = dest;
+        _lastFetchedAt = DateTime.now();
+      });
+    } finally {
+      _fetching = false;
+    }
+  }
+
+  String _humanRouteError(String code) {
+    switch (code) {
+      case 'missing_api_key':
+        return 'Maps key not configured';
+      case 'zero_results':
+      case 'no_routes':
+        return 'No driving route found';
+      case 'over_query_limit':
+      case 'over_daily_limit':
+        return 'Maps quota exceeded';
+      case 'request_denied':
+        return 'Directions API not enabled';
+      default:
+        return 'Route unavailable';
+    }
   }
 
   bool _needsOtp(AgentOrder o) {
@@ -165,6 +280,7 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final feedAsync = ref.watch(dashboardFeedProvider);
+    final agentPos = ref.watch(agentPositionProvider).valueOrNull;
     return Scaffold(
       appBar: AppBar(
         title: const Text('Job', style: TextStyle(fontWeight: FontWeight.w800)),
@@ -189,18 +305,27 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> {
               text: 'This job is no longer in your active list.',
             );
           }
+          final foundOrder = order;
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            _maybeFetchRoute(foundOrder, agentPos);
+          });
           return _Body(
-            order: order,
+            order: foundOrder,
             busy: _busy,
             localError: _localError,
             otpCtrl: _otpCtrl,
-            needsOtp: _needsOtp(order),
-            nextLabel: _nextLabel(order),
-            canAdvance: _nextStatus(order) != null,
-            onAdvance: () => _advance(order!),
-            onFail: () => _markFailed(order!),
-            onDownloadPdf: () => _downloadAuthorization(order!),
+            needsOtp: _needsOtp(foundOrder),
+            nextLabel: _nextLabel(foundOrder),
+            canAdvance: _nextStatus(foundOrder) != null,
+            onAdvance: () => _advance(foundOrder),
+            onFail: () => _markFailed(foundOrder),
+            onDownloadPdf: () => _downloadAuthorization(foundOrder),
             onCall: _callPhone,
+            routePoints: _route?.points,
+            routeDistanceText: _route?.distanceText,
+            routeDurationText: _route?.durationText,
+            routeLoading: _routeLoading,
+            routeError: _routeError,
           );
         },
       ),
@@ -220,6 +345,11 @@ class _Body extends StatelessWidget {
   final VoidCallback onFail;
   final VoidCallback onDownloadPdf;
   final void Function(String) onCall;
+  final List<LatLng>? routePoints;
+  final String? routeDistanceText;
+  final String? routeDurationText;
+  final bool routeLoading;
+  final String? routeError;
 
   const _Body({
     required this.order,
@@ -233,6 +363,11 @@ class _Body extends StatelessWidget {
     required this.onFail,
     required this.onDownloadPdf,
     required this.onCall,
+    required this.routePoints,
+    required this.routeDistanceText,
+    required this.routeDurationText,
+    required this.routeLoading,
+    required this.routeError,
   });
 
   bool get _isSend => order.orderType == OrderType.send;
@@ -255,6 +390,11 @@ class _Body extends StatelessWidget {
           drop: _ll(order.dropLat, order.dropLng),
           dropLabel: 'Drop',
           dropIsActive: _dropIsActive,
+          routePoints: routePoints,
+          distanceText: routeDistanceText,
+          durationText: routeDurationText,
+          routeLoading: routeLoading,
+          routeError: routeError,
         ),
         const SizedBox(height: 14),
         _PickupCard(order: order),
