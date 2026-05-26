@@ -4,6 +4,8 @@ export const env = {
   PORT: Number(process.env.PORT ?? 4000),
   JWT_SECRET: process.env.JWT_SECRET ?? 'dev-secret-change-me',
   OTP_DEV_MODE: (process.env.OTP_DEV_MODE ?? 'true') === 'true',
+  CORS_ORIGINS: process.env.CORS_ORIGINS ?? '',
+  TRUST_PROXY: (process.env.TRUST_PROXY ?? 'false') === 'true',
   MSG91_AUTH_KEY: process.env.MSG91_AUTH_KEY ?? '',
   MSG91_SENDER_ID: process.env.MSG91_SENDER_ID ?? 'PRCLPL',
   MSG91_TEMPLATE_ID: process.env.MSG91_TEMPLATE_ID ?? '',

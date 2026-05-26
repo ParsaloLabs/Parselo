@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
 import { env } from './env';
 import authRouter from './routes/auth';
 import meRouter from './routes/me';
@@ -15,7 +16,15 @@ import configRouter from './routes/config';
 import { dispatchSweep } from './dispatch';
 
 const app = express();
-app.use(cors());
+
+if (env.TRUST_PROXY) app.set('trust proxy', true);
+
+app.use(helmet());
+
+const corsOrigins = env.CORS_ORIGINS
+  ? env.CORS_ORIGINS.split(',').map((s) => s.trim()).filter(Boolean)
+  : true;
+app.use(cors({ origin: corsOrigins }));
 
 // Razorpay webhook needs the raw body for HMAC verification — mount before json parser.
 app.post('/api/v1/payments/webhook', ...webhookHandler);

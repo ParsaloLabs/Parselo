@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import bcrypt from 'bcryptjs';
+import rateLimit from 'express-rate-limit';
 import { z } from 'zod';
 import { query } from '../db';
 import { sendOtpSms } from '../sms';
@@ -10,7 +11,15 @@ const router = Router();
 
 const phoneSchema = z.string().regex(/^\+?\d{10,15}$/, 'Invalid phone');
 
-router.post('/send-otp', async (req, res) => {
+const sendOtpLimiter = rateLimit({
+  windowMs: 5 * 60 * 1000,
+  limit: 3,
+  message: { error: 'rate_limited', message: 'Too many OTP requests. Try again in a few minutes.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+router.post('/send-otp', sendOtpLimiter, async (req, res) => {
   const parsed = z.object({ phone: phoneSchema }).safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: 'invalid_phone' });
   const phone = parsed.data.phone;

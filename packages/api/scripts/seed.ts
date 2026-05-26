@@ -20,20 +20,25 @@ async function main() {
     [adminEmail, adminHash],
   );
 
-  // Default test agent
-  const agentPhone = process.env.SEED_AGENT_PHONE ?? '+919999999999';
-  const agentPass = process.env.SEED_AGENT_PASSWORD ?? 'agent1234';
-  const agentHash = await bcrypt.hash(agentPass, 10);
-  await pool.query(
-    `INSERT INTO agents (phone, full_name, password_hash, vehicle_type, vehicle_number, status)
-     VALUES ($1, 'Test Agent', $2, 'bike', 'KL-08-AA-1234', 'approved')
-     ON CONFLICT (phone) DO NOTHING`,
-    [agentPhone, agentHash],
-  );
+  const seedProd = process.env.SEED_PRODUCTION === 'true';
 
-  console.log('[seed] done');
-  console.log(`  admin: ${adminEmail} / ${adminPass}`);
-  console.log(`  agent: ${agentPhone} / ${agentPass}`);
+  if (!seedProd) {
+    const agentPhone = process.env.SEED_AGENT_PHONE ?? '+919999999999';
+    const agentPass = process.env.SEED_AGENT_PASSWORD ?? 'agent1234';
+    const agentHash = await bcrypt.hash(agentPass, 10);
+    await pool.query(
+      `INSERT INTO agents (phone, full_name, password_hash, vehicle_type, vehicle_number, status)
+       VALUES ($1, 'Test Agent', $2, 'bike', 'KL-08-AA-1234', 'approved')
+       ON CONFLICT (phone) DO NOTHING`,
+      [agentPhone, agentHash],
+    );
+    console.log('[seed] done (dev)');
+    console.log(`  admin: ${adminEmail} / ${adminPass}`);
+    console.log(`  agent: ${agentPhone} / ${agentPass}`);
+  } else {
+    console.log('[seed] done (production — admin only, no test agent)');
+    console.log(`  admin: ${adminEmail} / ${adminPass}`);
+  }
   await pool.end();
 }
 
