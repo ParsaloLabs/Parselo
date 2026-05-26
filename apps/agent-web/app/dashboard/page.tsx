@@ -10,7 +10,13 @@ type Job = {
   recipient_name?: string | null; delivery_address?: string | null;
   source_tracking_id?: string | null;
   parcel_description?: string | null;
+  offer_id?: string | null;
+  offer_distance_m?: number | null;
+  offer_expires_at?: string | null;
+  offer_rank?: number | null;
 };
+
+const DEFAULT_OFFER_TTL = 30;
 
 type ProfitData = {
   totalProfits: number;
@@ -21,11 +27,12 @@ export default function DashboardPage() {
   const router = useRouter();
   const [online, setOnline] = useState(false);
   const [assigned, setAssigned] = useState<Job[]>([]);
-  const [available, setAvailable] = useState<Job[]>([]);
+  const [offered, setOffered] = useState<Job[]>([]);
   const [profits, setProfits] = useState<ProfitData>({ totalProfits: 0, dailyProfits: {} });
   const [showCalendar, setShowCalendar] = useState(false);
   const [currentMonthDate, setCurrentMonthDate] = useState(new Date());
-  const [timeLeft, setTimeLeft] = useState(45);
+  const [timeLeft, setTimeLeft] = useState(DEFAULT_OFFER_TTL);
+  const [totalSeconds, setTotalSeconds] = useState(DEFAULT_OFFER_TTL);
   const [swipeState, setSwipeState] = useState<{ id: string; direction: 'left' | 'right' } | null>(null);
   
   const [error, setError] = useState<string | null>(null);
@@ -59,19 +66,20 @@ export default function DashboardPage() {
 
   const load = useCallback(async () => {
     try {
-      const res = await api<{ assigned: Job[]; available: Job[] }>('/agent/jobs');
-      setAssigned(res.assigned);
-      setAvailable(res.available);
+      const res = await api<{ assigned: Job[]; offered: Job[] }>('/agent/jobs');
+      setAssigned(res.assigned ?? []);
+      const incoming = res.offered ?? [];
+      setOffered(incoming);
 
       // Load profits
       const profitRes = await api<ProfitData>('/agent/profits');
       setProfits(profitRes);
 
-      const incomingIds = new Set(res.available.map((j) => j.id));
+      const incomingIds = new Set(incoming.map((j) => j.id));
       if (seenIdsRef.current === null) {
         seenIdsRef.current = incomingIds;
       } else {
-        const fresh = res.available.find(
+        const fresh = incoming.find(
           (j) => !seenIdsRef.current!.has(j.id) && !dismissedIdsRef.current.has(j.id),
         );
         if (fresh) {
@@ -139,7 +147,10 @@ export default function DashboardPage() {
 
   const skipPopup = (id: string) => {
     dismissedIdsRef.current.add(id);
-    setAvailable((current) => current.filter((j) => j.id !== id));
+    setOffered((current) => current.filter((j) => j.id !== id));
+    // Tell the server so the dispatcher can re-offer to the next agent.
+    // Fire-and-forget: TTL sweep reclaims the offer if this call fails.
+    api(`/agent/jobs/${id}/decline`, { method: 'POST' }).catch(() => {});
   };
 
   const handleAccept = useCallback(async (id: string) => {
@@ -160,30 +171,47 @@ export default function DashboardPage() {
     }, 350);
   }, [swipeState]);
 
-  const visibleAvailable = available.filter((j) => !dismissedIdsRef.current.has(j.id));
+  const visibleOffered = offered.filter((j) => !dismissedIdsRef.current.has(j.id));
 
-  const topJobId = visibleAvailable[0]?.id;
+  const topJob = visibleOffered[0];
+  const topJobId = topJob?.id;
+  const topExpiresAt = topJob?.offer_expires_at ?? null;
 
   useEffect(() => {
     if (!topJobId || !online) {
-      setTimeLeft(45);
+      setTimeLeft(DEFAULT_OFFER_TTL);
+      setTotalSeconds(DEFAULT_OFFER_TTL);
       return;
     }
 
-    setTimeLeft(45);
+    // Drive the countdown from the server-supplied expiry so all polling
+    // clients converge on the same auto-skip moment.
+    const computeRemaining = () => {
+      if (!topExpiresAt) return DEFAULT_OFFER_TTL;
+      const ms = new Date(topExpiresAt).getTime() - Date.now();
+      return Math.max(0, Math.ceil(ms / 1000));
+    };
+    const initial = computeRemaining();
+    setTotalSeconds(initial > DEFAULT_OFFER_TTL ? initial : DEFAULT_OFFER_TTL);
+    setTimeLeft(initial);
+    if (initial <= 0) {
+      // Server will reap on its sweep; just hide locally.
+      dismissedIdsRef.current.add(topJobId);
+      setOffered((cur) => cur.filter((j) => j.id !== topJobId));
+      return;
+    }
     const interval = setInterval(() => {
-      setTimeLeft((prev) => {
-        if (prev <= 1) {
-          clearInterval(interval);
-          handleSkip(topJobId);
-          return 45;
-        }
-        return prev - 1;
-      });
+      const next = computeRemaining();
+      setTimeLeft(next);
+      if (next <= 0) {
+        clearInterval(interval);
+        dismissedIdsRef.current.add(topJobId);
+        setOffered((cur) => cur.filter((j) => j.id !== topJobId));
+      }
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [topJobId, online, handleSkip]);
+  }, [topJobId, topExpiresAt, online]);
 
   // Calendar calculations
   const year = currentMonthDate.getFullYear();
@@ -374,7 +402,7 @@ export default function DashboardPage() {
       <div>
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-xs font-black text-slate-400 uppercase tracking-widest">
-            Incoming Job Queue ({visibleAvailable.length})
+            Incoming Job Queue ({visibleOffered.length})
           </h2>
         </div>
 
@@ -386,7 +414,7 @@ export default function DashboardPage() {
           </div>
         ) : loading ? (
           <div className="text-center py-8 text-xs text-slate-400 font-semibold animate-pulse">Loading Gigs Queue…</div>
-        ) : visibleAvailable.length === 0 ? (
+        ) : visibleOffered.length === 0 ? (
           <div className="bg-slate-50 border border-slate-200/60 rounded-2xl p-10 text-center">
             <div className="animate-bounce text-2xl mb-2">🔭</div>
             <strong className="text-xs text-slate-600 block">Scanning Thrissur area...</strong>
@@ -394,7 +422,7 @@ export default function DashboardPage() {
           </div>
         ) : (
           <div className="w-full flex flex-row overflow-x-auto gap-0 py-4 px-4 scroll-smooth scrollbar-none mt-2 relative">
-            {visibleAvailable.map((j, idx) => {
+            {visibleOffered.map((j, idx) => {
               const isSwiping = swipeState?.id === j.id;
               const swipeDir = swipeState?.direction;
 
@@ -433,7 +461,7 @@ export default function DashboardPage() {
                     <div className="absolute top-0 left-0 w-full h-[3px] bg-slate-100 overflow-hidden z-30">
                       <div 
                         className="h-full bg-gradient-to-r from-brand to-emerald-500 transition-all duration-1000 ease-linear" 
-                        style={{ width: `${(timeLeft / 45) * 100}%` }}
+                        style={{ width: `${(timeLeft / Math.max(totalSeconds, 1)) * 100}%` }}
                       />
                     </div>
                   )}
@@ -442,9 +470,18 @@ export default function DashboardPage() {
                     {/* Upper Section */}
                     <div className="flex justify-between items-start gap-4 pt-1">
                       <div className="flex-1 min-w-0">
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-brand/10 text-brand mb-2">
-                          {j.order_type === 'send' ? '📤 Dispatch Send' : '📥 Partner Collect'}
-                        </span>
+                        <div className="flex items-center gap-1.5 flex-wrap mb-2">
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-brand/10 text-brand">
+                            {j.order_type === 'send' ? '📤 Dispatch Send' : '📥 Partner Collect'}
+                          </span>
+                          {typeof j.offer_distance_m === 'number' && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-50 border border-slate-200 text-slate-700">
+                              📍 {j.offer_distance_m < 1000
+                                ? `${j.offer_distance_m} m`
+                                : `${(j.offer_distance_m / 1000).toFixed(j.offer_distance_m < 10000 ? 1 : 0)} km`} away
+                            </span>
+                          )}
+                        </div>
                         <h3 className="font-mono text-base font-bold text-slate-800 tracking-tight">{j.order_code}</h3>
                         <p className="text-xs text-slate-500 mt-1 truncate">
                           <strong>Item:</strong> {j.parcel_description || 'Package'}
