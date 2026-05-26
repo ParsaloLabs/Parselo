@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io' show Platform;
 
+import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 
@@ -225,4 +226,57 @@ final dismissedOffersProvider =
 
 final agentPositionProvider = StreamProvider.autoDispose<Position>((ref) {
   return ref.read(locationServiceProvider).positions;
+});
+
+// ─── One-shot current-locality label for the dashboard hero ──────────────────
+// Permission-passive: only fetches if the user has already granted location.
+// We don't want this side-effect to surface a permission prompt — the duty
+// toggle is the canonical permission moment.
+
+final currentLocationLabelProvider =
+    FutureProvider.autoDispose<String>((ref) async {
+  final servicesOn = await Geolocator.isLocationServiceEnabled();
+  if (!servicesOn) return 'Location off';
+
+  final perm = await Geolocator.checkPermission();
+  if (perm == LocationPermission.denied ||
+      perm == LocationPermission.deniedForever) {
+    return 'Permission off';
+  }
+
+  final Position pos;
+  try {
+    pos = await Geolocator.getCurrentPosition(
+      locationSettings: const LocationSettings(
+        accuracy: LocationAccuracy.low,
+        timeLimit: Duration(seconds: 8),
+      ),
+    );
+  } catch (_) {
+    return 'Unavailable';
+  }
+
+  // Reverse geocode via BigDataCloud's free client endpoint. No key, CORS-
+  // open — same provider the agent web app uses, so the two stay in sync.
+  try {
+    final res = await Dio().get<Map<String, dynamic>>(
+      'https://api.bigdatacloud.net/data/reverse-geocode-client',
+      queryParameters: {
+        'latitude': pos.latitude,
+        'longitude': pos.longitude,
+        'localityLanguage': 'en',
+      },
+      options: Options(receiveTimeout: const Duration(seconds: 6)),
+    );
+    final d = res.data ?? const <String, dynamic>{};
+    final name = (d['locality'] ??
+            d['city'] ??
+            d['principalSubdivision'] ??
+            '')
+        .toString();
+    if (name.isNotEmpty) return name;
+  } catch (_) {
+    // Fall through to coords.
+  }
+  return '${pos.latitude.toStringAsFixed(3)}, ${pos.longitude.toStringAsFixed(3)}';
 });

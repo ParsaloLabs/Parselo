@@ -30,6 +30,15 @@ class OnlineToggleCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final online = ref.watch(onlineStatusProvider);
+    // Only fetch + reverse-geocode while on duty. autoDispose on the provider
+    // means we stop hitting GPS/BigDataCloud the moment the agent goes off.
+    final locationLabel = online
+        ? ref.watch(currentLocationLabelProvider).when(
+              data: (v) => v,
+              loading: () => 'Locating…',
+              error: (_, _) => 'Unavailable',
+            )
+        : null;
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -81,6 +90,41 @@ class OnlineToggleCard extends ConsumerWidget {
                     fontSize: 12,
                   ),
                 ),
+                if (locationLabel != null) ...[
+                  const SizedBox(height: 10),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: Colors.white.withValues(alpha: 0.25)),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.location_on_rounded,
+                          size: 12,
+                          color: Color(0xFFA7F3D0),
+                        ),
+                        const SizedBox(width: 5),
+                        Flexible(
+                          child: Text(
+                            locationLabel,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 0.2,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ],
             ),
           ),

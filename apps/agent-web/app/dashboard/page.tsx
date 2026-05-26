@@ -34,7 +34,8 @@ export default function DashboardPage() {
   const [timeLeft, setTimeLeft] = useState(DEFAULT_OFFER_TTL);
   const [totalSeconds, setTotalSeconds] = useState(DEFAULT_OFFER_TTL);
   const [swipeState, setSwipeState] = useState<{ id: string; direction: 'left' | 'right' } | null>(null);
-  
+  const [locationLabel, setLocationLabel] = useState<string | null>(null);
+
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const seenIdsRef = useRef<Set<string> | null>(null);
@@ -104,6 +105,43 @@ export default function DashboardPage() {
     const t = setInterval(load, 8000);
     return () => clearInterval(t);
   }, [load]);
+
+  // One-shot reverse geocode for the hero badge — only while on duty so we
+  // don't burn a GPS+API call when the agent isn't even looking for jobs.
+  useEffect(() => {
+    if (!online) { setLocationLabel(null); return; }
+    if (typeof navigator === 'undefined' || !navigator.geolocation) {
+      setLocationLabel('Unavailable');
+      return;
+    }
+    let cancelled = false;
+    setLocationLabel('Locating…');
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        if (cancelled) return;
+        const { latitude, longitude } = pos.coords;
+        try {
+          const res = await fetch(
+            `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`,
+          );
+          if (!res.ok) throw new Error(`http_${res.status}`);
+          const d = await res.json();
+          const name =
+            d.locality || d.city || d.principalSubdivision ||
+            `${latitude.toFixed(3)}, ${longitude.toFixed(3)}`;
+          if (!cancelled) setLocationLabel(name);
+        } catch {
+          if (!cancelled) setLocationLabel(`${latitude.toFixed(3)}, ${longitude.toFixed(3)}`);
+        }
+      },
+      (err) => {
+        if (cancelled) return;
+        setLocationLabel(err.code === err.PERMISSION_DENIED ? 'Permission off' : 'Unavailable');
+      },
+      { enableHighAccuracy: false, timeout: 8000, maximumAge: 5 * 60 * 1000 },
+    );
+    return () => { cancelled = true; };
+  }, [online]);
 
   // Live location ping when online
   useEffect(() => {
@@ -252,19 +290,35 @@ export default function DashboardPage() {
             <h1 className="text-lg sm:text-2xl font-black mt-0.5 leading-tight">Hello, welcome back!</h1>
             <p className="hidden sm:block text-xs text-white/80 mt-1">Manage active orders, track daily earnings, and accept incoming gigs.</p>
           </div>
-          <div className="flex items-center gap-2 sm:gap-3.5 bg-white/10 backdrop-blur-md border border-white/10 rounded-xl px-2.5 py-1.5 sm:p-3 sm:px-4 shrink-0">
-            <div className="text-right">
-              <span className="block text-[8px] sm:text-[9px] uppercase font-bold text-emerald-200 tracking-wider">Duty Status</span>
-              <span className="block font-extrabold text-[10px] sm:text-xs mt-0.5">{online ? '🟢 ONLINE' : '⚪ OFFLINE'}</span>
-            </div>
-            <label className="relative inline-flex items-center cursor-pointer">
-              <input type="checkbox" checked={online} onChange={(e) => toggleOnline(e.target.checked)} className="sr-only peer" />
-              <div className="w-9 h-5 sm:w-11 sm:h-6 bg-white/20 peer-checked:bg-white rounded-full transition-colors relative border border-white/20">
-                <div className={`absolute top-0.5 left-0.5 bg-brand w-4 h-4 sm:w-5 sm:h-5 rounded-full transition-all ${
-                  online ? 'translate-x-4 bg-emerald-600 sm:translate-x-5' : ''
-                }`} />
+          <div className="flex flex-col gap-1.5 sm:gap-2 shrink-0">
+            {locationLabel && (
+              <div className="flex items-center gap-2 bg-white/10 backdrop-blur-md border border-white/10 rounded-xl px-2.5 py-1.5 sm:px-4 sm:py-2">
+                <span className="text-sm sm:text-base leading-none">📍</span>
+                <div className="text-right min-w-0">
+                  <span className="block text-[8px] sm:text-[9px] uppercase font-bold text-emerald-200 tracking-wider">Location</span>
+                  <span
+                    className="block font-extrabold text-[10px] sm:text-xs mt-0.5 truncate max-w-[140px] sm:max-w-[180px]"
+                    title={locationLabel}
+                  >
+                    {locationLabel}
+                  </span>
+                </div>
               </div>
-            </label>
+            )}
+            <div className="flex items-center gap-2 sm:gap-3.5 bg-white/10 backdrop-blur-md border border-white/10 rounded-xl px-2.5 py-1.5 sm:p-3 sm:px-4">
+              <div className="text-right">
+                <span className="block text-[8px] sm:text-[9px] uppercase font-bold text-emerald-200 tracking-wider">Duty Status</span>
+                <span className="block font-extrabold text-[10px] sm:text-xs mt-0.5">{online ? '🟢 ONLINE' : '⚪ OFFLINE'}</span>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" checked={online} onChange={(e) => toggleOnline(e.target.checked)} className="sr-only peer" />
+                <div className="w-9 h-5 sm:w-11 sm:h-6 bg-white/20 peer-checked:bg-white rounded-full transition-colors relative border border-white/20">
+                  <div className={`absolute top-0.5 left-0.5 bg-brand w-4 h-4 sm:w-5 sm:h-5 rounded-full transition-all ${
+                    online ? 'translate-x-4 bg-emerald-600 sm:translate-x-5' : ''
+                  }`} />
+                </div>
+              </label>
+            </div>
           </div>
         </div>
         {/* Subtle background graphics */}
