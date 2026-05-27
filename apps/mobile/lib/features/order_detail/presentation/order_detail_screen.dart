@@ -19,6 +19,7 @@ class OrderDetailScreen extends StatefulWidget {
 
 class _OrderDetailScreenState extends State<OrderDetailScreen> {
   late OrderDetailNotifier _notifier;
+  GoogleMapController? _mapController;
 
   static const List<String> STEPS = [
     'pending',
@@ -94,6 +95,14 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
         final showMap = TRACKING_STATES.contains(order.status) &&
             order.agent?.lat != null &&
             order.agent?.lng != null;
+
+        if (showMap && _mapController != null) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            _mapController?.animateCamera(
+              CameraUpdate.newLatLng(LatLng(order.agent!.lat!, order.agent!.lng!)),
+            );
+          });
+        }
 
         // OTP Display logic:
         // Send: until collected. Receive: only when out for delivery.
@@ -272,6 +281,9 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                           target: LatLng(order.agent!.lat!, order.agent!.lng!),
                           zoom: 14,
                         ),
+                        onMapCreated: (controller) {
+                          _mapController = controller;
+                        },
                         markers: {
                           Marker(
                             markerId: const MarkerId('agent'),

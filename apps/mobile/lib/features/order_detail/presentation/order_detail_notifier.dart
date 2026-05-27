@@ -1,6 +1,11 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:pusher_channels_flutter/pusher_channels_flutter.dart';
 import '../../../core/network/api_client.dart';
+
+const String pusherKey = String.fromEnvironment('PUSHER_KEY', defaultValue: 'your_pusher_key');
+const String pusherCluster = String.fromEnvironment('PUSHER_CLUSTER', defaultValue: 'ap2');
 
 class HistoryEntry {
   final String status;
@@ -167,13 +172,78 @@ class OrderDetailNotifier extends ChangeNotifier {
 
   static const Set<String> terminalStates = {'delivered', 'cancelled', 'failed'};
 
+  PusherChannelsFlutter? _pusher;
+  bool _pusherInitialized = false;
+
   OrderDetailNotifier(this.orderId);
 
-  void startPolling() {
-    loadDetails(showLoading: true);
+  Future<void> initPusher() async {
+    if (_pusherInitialized) return;
+    if (pusherKey == 'your_pusher_key' || pusherKey.isEmpty) return;
+
+    try {
+      _pusher = PusherChannelsFlutter.getInstance();
+      await _pusher!.init(
+        apiKey: pusherKey,
+        cluster: pusherCluster,
+        onEvent: (event) {
+          if (event.eventName == 'location_received') {
+            try {
+              final payload = jsonDecode(event.data);
+              final lat = _parseDouble(payload['lat']);
+              final lng = _parseDouble(payload['lng']);
+              if (lat != null && lng != null && _order != null && _order!.agent != null) {
+                final updatedAgent = AgentInfo(
+                  name: _order!.agent!.name,
+                  phone: _order!.agent!.phone,
+                  lat: lat,
+                  lng: lng,
+                );
+                _order = DetailedOrder(
+                  id: _order!.id,
+                  orderCode: _order!.orderCode,
+                  orderType: _order!.orderType,
+                  status: _order!.status,
+                  parcelType: _order!.parcelType,
+                  parcelWeightKg: _order!.parcelWeightKg,
+                  parcelDescription: _order!.parcelDescription,
+                  recipientName: _order!.recipientName,
+                  recipientPhone: _order!.recipientPhone,
+                  deliveryAddress: _order!.deliveryAddress,
+                  sourceTrackingId: _order!.sourceTrackingId,
+                  courierCharge: _order!.courierCharge,
+                  serviceFee: _order!.serviceFee,
+                  gstAmount: _order!.gstAmount,
+                  totalAmount: _order!.totalAmount,
+                  deliveryOtp: _order!.deliveryOtp,
+                  paymentStatus: _order!.paymentStatus,
+                  failureReason: _order!.failureReason,
+                  refundAmountPaise: _order!.refundAmountPaise,
+                  createdAt: _order!.createdAt,
+                  history: _order!.history,
+                  agent: updatedAgent,
+                );
+                notifyListeners();
+              }
+            } catch (_) {}
+          } else if (event.eventName == 'status_changed') {
+            loadDetails(showLoading: false);
+          }
+        },
+      );
+      await _pusher!.subscribe(channelName: 'order-$orderId');
+      await _pusher!.connect();
+      _pusherInitialized = true;
+    } catch (_) {}
+  }
+
+  void startPolling() async {
+    await loadDetails(showLoading: true);
+    initPusher();
     _timer = Timer.periodic(const Duration(seconds: 10), (t) {
       if (_order != null && terminalStates.contains(_order!.status)) {
         t.cancel();
+        stopPolling();
       } else {
         loadDetails(showLoading: false);
       }
@@ -182,6 +252,13 @@ class OrderDetailNotifier extends ChangeNotifier {
 
   void stopPolling() {
     _timer?.cancel();
+    if (_pusherInitialized && _pusher != null) {
+      try {
+        _pusher!.unsubscribe(channelName: 'order-$orderId');
+        _pusher!.disconnect();
+      } catch (_) {}
+      _pusherInitialized = false;
+    }
   }
 
   Future<void> loadDetails({bool showLoading = false}) async {
