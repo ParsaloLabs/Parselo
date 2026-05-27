@@ -1,54 +1,70 @@
-// Service-area gate.
+// Service-area gate, redefined.
 //
-// A customer pickup (for send) or delivery (for receive) is valid only if it
-// falls within an active service-areas row. Check is Haversine — fast, no
-// external API. Mirrors dispatch.ts's 10s in-process cache pattern, so the
-// order-create hot path doesn't re-read the row on every request.
+// "Where do we operate?" is now derived from the courier_branches table.
+// A pickup/delivery address is serviceable iff there is at least one active
+// courier office within SERVICE_RADIUS_M of it. That way adding a new office
+// in another city automatically opens the zone — admin manages one list, not
+// two.
+//
+// Same 10s in-process cache pattern as before so the order-create hot path
+// doesn't re-read the table on every request.
 
 import { query } from './db';
 
-export type ServiceArea = {
-  name: string;
-  center_lat: number;
-  center_lng: number;
-  radius_m: number;
+export const SERVICE_RADIUS_M = 15_000;
+
+export type CourierOffice = {
+  id: string;
+  courier_name: string;
+  name: string | null;
+  district: string | null;
+  full_address: string;
+  latitude: number;
+  longitude: number;
 };
 
 const CACHE_MS = 10_000;
-let cached: { value: ServiceArea[]; loadedAt: number } | null = null;
+let cached: { value: CourierOffice[]; loadedAt: number } | null = null;
 
 export function invalidateServiceAreaCache(): void {
   cached = null;
 }
 
-export async function listServiceAreas(): Promise<ServiceArea[]> {
+export async function listCourierOffices(): Promise<CourierOffice[]> {
   if (cached && Date.now() - cached.loadedAt < CACHE_MS) {
     return cached.value;
   }
   try {
     const { rows } = await query<{
-      name: string;
-      center_lat: string;
-      center_lng: string;
-      radius_m: number;
+      id: string;
+      courier_name: string;
+      name: string | null;
+      district: string | null;
+      full_address: string;
+      latitude: string;
+      longitude: string;
     }>(
-      `SELECT name, center_lat, center_lng, radius_m
-         FROM service_areas
-        WHERE is_active = TRUE
-        ORDER BY name`,
+      `SELECT b.id, c.name AS courier_name, b.name, b.district, b.full_address,
+              b.latitude, b.longitude
+         FROM courier_branches b
+         JOIN couriers c ON c.id = b.courier_id
+        WHERE c.is_active = TRUE
+          AND b.latitude IS NOT NULL
+          AND b.longitude IS NOT NULL`,
     );
-    const value: ServiceArea[] = rows.map((r) => ({
+    const value: CourierOffice[] = rows.map((r) => ({
+      id: r.id,
+      courier_name: r.courier_name,
       name: r.name,
-      center_lat: Number(r.center_lat),
-      center_lng: Number(r.center_lng),
-      radius_m: r.radius_m,
+      district: r.district,
+      full_address: r.full_address,
+      latitude: Number(r.latitude),
+      longitude: Number(r.longitude),
     }));
     cached = { value, loadedAt: Date.now() };
     return value;
   } catch (e) {
-    // Table missing (pre-migration) — fail closed so we don't accept orders
-    // from anywhere by accident. Log once per cache window.
-    console.warn('[service-area] load failed, treating all locations as out-of-zone', e);
+    console.warn('[service-area] office load failed, treating all locations as out-of-zone', e);
     return [];
   }
 }
@@ -70,12 +86,31 @@ export function distanceMeters(
   return 2 * R * Math.asin(Math.sqrt(a));
 }
 
-export async function isInServiceArea(lat: number, lng: number): Promise<boolean> {
-  const areas = await listServiceAreas();
-  for (const a of areas) {
-    if (distanceMeters(lat, lng, a.center_lat, a.center_lng) <= a.radius_m) {
-      return true;
-    }
+export type RankedOffice = CourierOffice & { distance_m: number };
+
+export async function findNearbyOffices(
+  lat: number,
+  lng: number,
+  radiusM: number = SERVICE_RADIUS_M,
+): Promise<RankedOffice[]> {
+  const offices = await listCourierOffices();
+  const ranked: RankedOffice[] = [];
+  for (const o of offices) {
+    const d = distanceMeters(lat, lng, o.latitude, o.longitude);
+    if (d <= radiusM) ranked.push({ ...o, distance_m: Math.round(d) });
+  }
+  ranked.sort((a, b) => a.distance_m - b.distance_m);
+  return ranked;
+}
+
+export async function hasNearbyOffice(
+  lat: number,
+  lng: number,
+  radiusM: number = SERVICE_RADIUS_M,
+): Promise<boolean> {
+  const offices = await listCourierOffices();
+  for (const o of offices) {
+    if (distanceMeters(lat, lng, o.latitude, o.longitude) <= radiusM) return true;
   }
   return false;
 }

@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { api } from '../../../lib/api';
-import { loadServiceAreas, isInServiceArea, nearestServiceArea } from '../../../lib/serviceArea';
+import { loadCourierOffices, isInServiceArea, nearestServiceArea } from '../../../lib/serviceArea';
 import MapPicker, { PickedLocation } from '../../../components/MapPicker';
 import OutOfServiceArea from '../../../components/OutOfServiceArea';
 
@@ -31,7 +31,7 @@ export default function SendPage() {
   const [deliveryPin, setDeliveryPin] = useState<PickedLocation | null>(null);
   const [outOfArea, setOutOfArea] = useState<{ city: string | null } | null>(null);
 
-  useEffect(() => { loadServiceAreas(); }, []);
+  useEffect(() => { loadCourierOffices(); }, []);
 
   const [parcelType, setParcelType] = useState('Documents');
   const [weight, setWeight] = useState('1');

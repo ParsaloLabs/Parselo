@@ -6,7 +6,7 @@ import { priceReceiveOrder, priceSendOrder } from '../pricing';
 import { generateOrderCode } from '../orderCode';
 import { notifyOrderEvent } from '../notifications';
 import { buildAuthorizationPdf } from '../pdf';
-import { isInServiceArea } from '../serviceArea';
+import { hasNearbyOffice } from '../serviceArea';
 
 const router = Router();
 
@@ -69,12 +69,13 @@ router.post('/', requireAuth(['user']), async (req, res) => {
     const pLat = pickupRows[0].latitude !== null ? Number(pickupRows[0].latitude) : null;
     const pLng = pickupRows[0].longitude !== null ? Number(pickupRows[0].longitude) : null;
 
-    // Service-area gate: pickup must be inside an active zone. No coords ⇒
-    // can't verify ⇒ force the customer back into the map picker.
+    // Service-area gate: at least one active courier office must sit within
+    // SERVICE_RADIUS_M of the pickup. No coords ⇒ can't verify ⇒ force the
+    // customer back into the map picker.
     if (pLat === null || pLng === null) {
       return res.status(409).json({ error: 'pickup_address_missing_coords' });
     }
-    if (!(await isInServiceArea(pLat, pLng))) {
+    if (!(await hasNearbyOffice(pLat, pLng))) {
       return res.status(409).json({ error: 'pickup_out_of_service_area' });
     }
 
@@ -134,7 +135,7 @@ router.post('/', requireAuth(['user']), async (req, res) => {
   if (dLat === null || dLng === null) {
     return res.status(409).json({ error: 'pickup_address_missing_coords' });
   }
-  if (!(await isInServiceArea(dLat, dLng))) {
+  if (!(await hasNearbyOffice(dLat, dLng))) {
     return res.status(409).json({ error: 'pickup_out_of_service_area' });
   }
 

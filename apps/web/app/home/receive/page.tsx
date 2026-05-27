@@ -6,7 +6,7 @@ import { api } from '../../../lib/api';
 import SignaturePad, { SignaturePadHandle } from '../../../components/SignaturePad';
 import MapPicker, { PickedLocation } from '../../../components/MapPicker';
 import OutOfServiceArea from '../../../components/OutOfServiceArea';
-import { loadServiceAreas, isInServiceArea, nearestServiceArea } from '../../../lib/serviceArea';
+import { loadCourierOffices, isInServiceArea, nearestServiceArea } from '../../../lib/serviceArea';
 
 async function compressImage(file: File, maxDim = 1200, quality = 0.75): Promise<string> {
   const url = URL.createObjectURL(file);
@@ -75,7 +75,7 @@ export default function ReceivePage() {
   };
 
   useEffect(() => {
-    loadServiceAreas();
+    loadCourierOffices();
     api<Courier[]>('/couriers').then(setCouriers).catch(() => {});
     api<Address[]>('/addresses').then((rows) => {
       setAddresses(rows);

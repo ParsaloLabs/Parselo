@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { listServiceAreas } from '../serviceArea';
+import { findNearbyOffices, listCourierOffices, SERVICE_RADIUS_M } from '../serviceArea';
 
 const router = Router();
 
@@ -16,11 +16,27 @@ router.get('/pricing', (_req, res) => {
   });
 });
 
-// Active service areas — mobile app pre-validates pin drops against this list
-// so the out-of-zone sheet appears instantly without a round-trip.
-router.get('/service-areas', async (_req, res) => {
-  const areas = await listServiceAreas();
-  res.json({ areas });
+// All active courier offices with coords. Clients cache this list and run a
+// local Haversine on every pin drop, so the "out-of-zone" sheet appears
+// instantly without a server round-trip.
+router.get('/courier-offices', async (_req, res) => {
+  const offices = await listCourierOffices();
+  res.json({ radius_m: SERVICE_RADIUS_M, offices });
+});
+
+// Server-ranked nearby list. The customer-side picker can call this with the
+// pin coords to render "drop-off office — sorted nearest first" without
+// shipping the math to every client. ?lat=&lng=&radius_m=15000
+router.get('/nearby-courier-offices', async (req, res) => {
+  const lat = Number(req.query.lat);
+  const lng = Number(req.query.lng);
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+    return res.status(400).json({ error: 'invalid_coords' });
+  }
+  const radiusRaw = Number(req.query.radius_m);
+  const radiusM = Number.isFinite(radiusRaw) && radiusRaw > 0 ? radiusRaw : SERVICE_RADIUS_M;
+  const offices = await findNearbyOffices(lat, lng, radiusM);
+  res.json({ radius_m: radiusM, offices });
 });
 
 export default router;

@@ -205,7 +205,7 @@ class _ReceiveParcelScreenState extends State<ReceiveParcelScreen> {
                                   final nearest = ServiceAreaConfig.instance.nearest(loc.lat, loc.lng);
                                   OutOfServiceAreaSheet.show(
                                     context,
-                                    nearestCityName: nearest?.name,
+                                    nearestCityName: nearest?.district,
                                     onPickAgain: () {},
                                   );
                                   return;

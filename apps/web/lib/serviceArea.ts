@@ -1,20 +1,39 @@
 import { api } from './api';
 
-export type ServiceArea = {
-  name: string;
-  center_lat: number;
-  center_lng: number;
-  radius_m: number;
+// A location is serviceable iff at least one active courier office sits
+// within SERVICE_RADIUS_M of it. Clients cache the full office list once and
+// run a local Haversine on every pin drop, so the "out-of-zone" sheet
+// appears instantly without a server round-trip.
+
+export const SERVICE_RADIUS_M = 15_000;
+
+export type CourierOffice = {
+  id: string;
+  courier_name: string;
+  name: string | null;
+  district: string | null;
+  full_address: string;
+  latitude: number;
+  longitude: number;
 };
 
-// Fallback matches db/migrations/0010_service_areas.sql seed. Used until the
-// first /config/service-areas fetch completes so a cold page load still gates
-// correctly — fail-safe inward, never fail-open outward.
-const FALLBACK: ServiceArea[] = [
-  { name: 'Thrissur', center_lat: 10.5276, center_lng: 76.2144, radius_m: 15000 },
+export type RankedOffice = CourierOffice & { distance_m: number };
+
+// Fallback so a cold offline boot still gates correctly — treats Thrissur
+// town hall as a single pseudo-office. Fail-safe inward, never fail-open.
+const FALLBACK: CourierOffice[] = [
+  {
+    id: 'fallback-thrissur',
+    courier_name: 'Parsalo',
+    name: 'Thrissur HQ',
+    district: 'Thrissur',
+    full_address: 'Thrissur, Kerala',
+    latitude: 10.5276,
+    longitude: 76.2144,
+  },
 ];
 
-let cache: ServiceArea[] = FALLBACK;
+let cache: CourierOffice[] = FALLBACK;
 let loaded = false;
 let inflight: Promise<void> | null = null;
 
@@ -29,18 +48,20 @@ function distanceMeters(lat1: number, lng1: number, lat2: number, lng2: number):
   return 2 * R * Math.asin(Math.sqrt(a));
 }
 
-export async function loadServiceAreas(): Promise<void> {
+export async function loadCourierOffices(): Promise<void> {
   if (loaded) return;
   if (inflight) return inflight;
   inflight = (async () => {
     try {
-      const res = await api<{ areas: ServiceArea[] }>('/config/service-areas', { auth: false });
-      if (res?.areas?.length) {
-        cache = res.areas.map((a) => ({
-          name: a.name,
-          center_lat: Number(a.center_lat),
-          center_lng: Number(a.center_lng),
-          radius_m: Number(a.radius_m),
+      const res = await api<{ offices: CourierOffice[]; radius_m: number }>(
+        '/config/courier-offices',
+        { auth: false },
+      );
+      if (res?.offices?.length) {
+        cache = res.offices.map((o) => ({
+          ...o,
+          latitude: Number(o.latitude),
+          longitude: Number(o.longitude),
         }));
       }
       loaded = true;
@@ -53,25 +74,33 @@ export async function loadServiceAreas(): Promise<void> {
   return inflight;
 }
 
-export function isInServiceArea(lat: number, lng: number): boolean {
-  for (const a of cache) {
-    if (distanceMeters(lat, lng, a.center_lat, a.center_lng) <= a.radius_m) {
-      return true;
-    }
+export function isInServiceArea(lat: number, lng: number, radiusM: number = SERVICE_RADIUS_M): boolean {
+  for (const o of cache) {
+    if (distanceMeters(lat, lng, o.latitude, o.longitude) <= radiusM) return true;
   }
   return false;
 }
 
-export function nearestServiceArea(lat: number, lng: number): ServiceArea | null {
+export function nearbyOffices(lat: number, lng: number, radiusM: number = SERVICE_RADIUS_M): RankedOffice[] {
+  const ranked: RankedOffice[] = [];
+  for (const o of cache) {
+    const d = distanceMeters(lat, lng, o.latitude, o.longitude);
+    if (d <= radiusM) ranked.push({ ...o, distance_m: Math.round(d) });
+  }
+  ranked.sort((a, b) => a.distance_m - b.distance_m);
+  return ranked;
+}
+
+export function nearestServiceArea(lat: number, lng: number): { name: string } | null {
   if (cache.length === 0) return null;
   let best = cache[0];
-  let bestD = distanceMeters(lat, lng, best.center_lat, best.center_lng);
+  let bestD = distanceMeters(lat, lng, best.latitude, best.longitude);
   for (let i = 1; i < cache.length; i++) {
-    const d = distanceMeters(lat, lng, cache[i].center_lat, cache[i].center_lng);
+    const d = distanceMeters(lat, lng, cache[i].latitude, cache[i].longitude);
     if (d < bestD) {
       bestD = d;
       best = cache[i];
     }
   }
-  return best;
+  return { name: best.district ?? best.courier_name };
 }

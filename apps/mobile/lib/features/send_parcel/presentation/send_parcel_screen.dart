@@ -148,7 +148,7 @@ class _SendParcelScreenState extends State<SendParcelScreen> {
                             final nearest = ServiceAreaConfig.instance.nearest(loc.lat, loc.lng);
                             OutOfServiceAreaSheet.show(
                               context,
-                              nearestCityName: nearest?.name,
+                              nearestCityName: nearest?.district,
                               onPickAgain: () {},
                             );
                             return;
