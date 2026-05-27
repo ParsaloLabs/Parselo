@@ -4,6 +4,7 @@ import { query } from '../db';
 import { requireAuth } from '../auth';
 import { notifyOrderEvent } from '../notifications';
 import { cancelOpenOffers, dispatchConfig, dispatchOrder } from '../dispatch';
+import { broadcastToOrder } from '../io';
 
 const router = Router();
 
@@ -278,10 +279,29 @@ router.post('/location', requireAuth(['agent']), async (req, res) => {
   const agentId = (req.principal as any).agentId;
   const parsed = z.object({ lat: z.number(), lng: z.number() }).safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: 'invalid_input' });
+  
+  const { lat, lng } = parsed.data;
+  
   await query(
     `UPDATE agents SET current_lat = $1, current_lng = $2, last_location_at = NOW() WHERE id = $3`,
-    [parsed.data.lat, parsed.data.lng, agentId],
+    [lat, lng, agentId],
   );
+
+  // Retrieve active in-flight jobs assigned to this agent to push telemetry to the tracking rooms
+  try {
+    const { rows: activeJobs } = await query<{ id: string }>(
+      `SELECT id FROM orders 
+        WHERE agent_id = $1 
+          AND status NOT IN ('delivered', 'cancelled', 'failed')`,
+      [agentId]
+    );
+    for (const job of activeJobs) {
+      broadcastToOrder(job.id, 'location_received', { lat, lng, agentId });
+    }
+  } catch (err) {
+    console.error(`[agent:location] failed to broadcast telemetry`, err);
+  }
+
   res.json({ ok: true });
 });
 

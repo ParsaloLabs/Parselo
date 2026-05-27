@@ -84,9 +84,28 @@ class _SendParcelScreenState extends State<SendParcelScreen> {
               ),
               
               Expanded(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(20),
-                  child: _buildStepContent(),
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 300),
+                  transitionBuilder: (child, animation) {
+                    return SlideTransition(
+                      position: Tween<Offset>(
+                        begin: const Offset(0.08, 0.0),
+                        end: Offset.zero,
+                      ).animate(CurvedAnimation(
+                        parent: animation,
+                        curve: Curves.easeOutCubic,
+                      )),
+                      child: FadeTransition(
+                        opacity: animation,
+                        child: child,
+                      ),
+                    );
+                  },
+                  child: SingleChildScrollView(
+                    key: ValueKey<int>(_notifier.step),
+                    padding: const EdgeInsets.all(20),
+                    child: _buildStepContent(),
+                  ),
                 ),
               ),
             ],
@@ -112,22 +131,47 @@ class _SendParcelScreenState extends State<SendParcelScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   if (_notifier.addresses.isNotEmpty) ...[
-                    ..._notifier.addresses.map((a) => RadioListTile<String>(
+                    ..._notifier.addresses.map((a) {
+                      final isSelected = _notifier.pickupId == a.id;
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 8),
+                        decoration: BoxDecoration(
+                          color: isSelected ? AppColors.brand.withOpacity(0.04) : Colors.transparent,
+                          border: Border.all(
+                            color: isSelected ? AppColors.brand : AppColors.border,
+                            width: isSelected ? 1.5 : 1,
+                          ),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: RadioListTile<String>(
                           value: a.id,
                           groupValue: _notifier.pickupId,
                           activeColor: AppColors.brand,
-                          contentPadding: EdgeInsets.zero,
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 12),
                           onChanged: (val) => _notifier.setPickupId(val ?? ''),
                           title: Text(a.fullAddress, style: const TextStyle(fontSize: 13, color: AppColors.textPrimary)),
                           subtitle: a.pincode != null ? Text('PIN ${a.pincode}', style: const TextStyle(fontSize: 11)) : null,
-                        )),
-                    RadioListTile<String>(
-                      value: '',
-                      groupValue: _notifier.pickupId,
-                      activeColor: AppColors.brand,
-                      contentPadding: EdgeInsets.zero,
-                      onChanged: (val) => _notifier.setPickupId(val ?? ''),
-                      title: const Text('Use a new address', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                        ),
+                      );
+                    }),
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      decoration: BoxDecoration(
+                        color: _notifier.pickupId.isEmpty ? AppColors.brand.withOpacity(0.04) : Colors.transparent,
+                        border: Border.all(
+                          color: _notifier.pickupId.isEmpty ? AppColors.brand : AppColors.border,
+                          width: _notifier.pickupId.isEmpty ? 1.5 : 1,
+                        ),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: RadioListTile<String>(
+                        value: '',
+                        groupValue: _notifier.pickupId,
+                        activeColor: AppColors.brand,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+                        onChanged: (val) => _notifier.setPickupId(val ?? ''),
+                        title: const Text('Use a new address', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                      ),
                     ),
                   ],
                   
@@ -151,6 +195,11 @@ class _SendParcelScreenState extends State<SendParcelScreen> {
                               nearestCityName: nearest?.district,
                               onPickAgain: () {},
                             );
+                            _notifier.setPickupPin(null);
+                            _pickupAddressCtrl.clear();
+                            _pickupPincodeCtrl.clear();
+                            _notifier.setNewPickupAddress('');
+                            _notifier.setNewPickupPincode('');
                             return;
                           }
                           _notifier.setPickupPin(loc);
@@ -204,7 +253,7 @@ class _SendParcelScreenState extends State<SendParcelScreen> {
                         labelText: 'Address line 1',
                         hintText: 'House/flat, street, area — as you want on the courier label',
                       ),
-                      validator: (val) => val == null || val.trim().isEmpty ? 'Pickup address is required' : null,
+                      validator: (val) => val == null || val.trim().length < 5 ? 'Address must be at least 5 characters long' : null,
                     ),
                     const SizedBox(height: 12),
                     TextFormField(
@@ -374,7 +423,7 @@ class _SendParcelScreenState extends State<SendParcelScreen> {
                       labelText: 'Address line 1',
                       hintText: 'House/flat, street, area — as you want on the courier label',
                     ),
-                    validator: (val) => val == null || val.trim().isEmpty ? 'Address details are required' : null,
+                    validator: (val) => val == null || val.trim().length < 5 ? 'Address must be at least 5 characters long' : null,
                     onChanged: _notifier.setDeliveryAddress,
                   ),
                   const SizedBox(height: 12),

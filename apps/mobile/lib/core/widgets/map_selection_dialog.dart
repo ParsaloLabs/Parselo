@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:geocoding/geocoding.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../theme/theme.dart';
 import 'brand_button.dart';
@@ -113,6 +114,85 @@ class _MapSelectionDialogState extends State<MapSelectionDialog> {
     }
   }
 
+  final TextEditingController _searchCtrl = TextEditingController();
+  bool _searching = false;
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _searchAddress(String query) async {
+    if (query.trim().isEmpty) return;
+    setState(() {
+      _searching = true;
+    });
+    try {
+      final locations = await locationFromAddress(query);
+      if (locations.isNotEmpty) {
+        final loc = locations.first;
+        final latLng = LatLng(loc.latitude, loc.longitude);
+        _selectedLatLng = latLng;
+        _mapController.animateCamera(
+          CameraUpdate.newLatLngZoom(latLng, 16),
+        );
+        _resolveAddress();
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Location not found. Try a different query.'),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Could not find that location. Please try adding more details.'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _searching = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _determinePosition() async {
+    if (widget.initialLocation != null) return;
+    try {
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) return;
+
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) return;
+      }
+      
+      if (permission == LocationPermission.deniedForever) return;
+
+      final position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+
+      final latLng = LatLng(position.latitude, position.longitude);
+      _selectedLatLng = latLng;
+      _mapController.animateCamera(
+        CameraUpdate.newLatLngZoom(latLng, 16),
+      );
+      _resolveAddress();
+    } catch (_) {}
+  }
+
   @override
   Widget build(BuildContext context) {
     return Dialog(
@@ -157,6 +237,7 @@ class _MapSelectionDialogState extends State<MapSelectionDialog> {
                     onMapCreated: (controller) {
                       _mapController = controller;
                       _resolveAddress();
+                      _determinePosition();
                     },
                     onCameraMove: _onCameraMove,
                     onCameraIdle: _onCameraIdle,
@@ -179,6 +260,63 @@ class _MapSelectionDialogState extends State<MapSelectionDialog> {
                             offset: const Offset(0, 4),
                           )
                         ],
+                      ),
+                    ),
+                  ),
+                  // Search Bar Overlay
+                  Positioned(
+                    top: 12,
+                    left: 12,
+                    right: 12,
+                    child: Card(
+                      elevation: 4,
+                      shadowColor: Colors.black.withOpacity(0.2),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      color: Colors.white,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.search_rounded, color: AppColors.brand, size: 20),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: TextField(
+                                controller: _searchCtrl,
+                                textInputAction: TextInputAction.search,
+                                onSubmitted: _searchAddress,
+                                onChanged: (val) {
+                                  setState(() {});
+                                },
+                                decoration: const InputDecoration(
+                                  hintText: 'Search address or landmark...',
+                                  border: InputBorder.none,
+                                  enabledBorder: InputBorder.none,
+                                  focusedBorder: InputBorder.none,
+                                  contentPadding: EdgeInsets.symmetric(vertical: 10),
+                                  filled: false,
+                                ),
+                                style: const TextStyle(fontSize: 14, color: AppColors.textPrimary),
+                              ),
+                            ),
+                            if (_searching)
+                              const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.brand),
+                              )
+                            else if (_searchCtrl.text.isNotEmpty)
+                              IconButton(
+                                icon: const Icon(Icons.close_rounded, color: AppColors.textSecondary, size: 18),
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(),
+                                onPressed: () {
+                                  setState(() {
+                                    _searchCtrl.clear();
+                                  });
+                                },
+                              ),
+                          ],
+                        ),
                       ),
                     ),
                   ),

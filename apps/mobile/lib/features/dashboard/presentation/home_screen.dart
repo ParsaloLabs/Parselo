@@ -164,58 +164,64 @@ class _HomeScreenState extends State<HomeScreen> {
                       children: [
                         // Send a parcel
                         Expanded(
-                          child: GestureDetector(
-                            onTap: () {
-                              Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder: (context) => SendParcelScreen(onOrderPlaced: _refresh),
-                                ),
-                              );
-                            },
-                            child: Container(
-                              height: 170,
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                              decoration: BoxDecoration(
-                                color: AppColors.brand,
+                          child: Container(
+                            height: 170,
+                            decoration: BoxDecoration(
+                              color: AppColors.brand,
+                              borderRadius: BorderRadius.circular(20),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: AppColors.brand.withOpacity(0.25),
+                                  blurRadius: 16,
+                                  offset: const Offset(0, 8),
+                                )
+                              ],
+                            ),
+                            child: Material(
+                              color: Colors.transparent,
+                              child: InkWell(
                                 borderRadius: BorderRadius.circular(20),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: AppColors.brand.withOpacity(0.25),
-                                    blurRadius: 16,
-                                    offset: const Offset(0, 8),
-                                  )
-                                ],
-                              ),
-                              child: const Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text('📤', style: TextStyle(fontSize: 36)),
-                                  Column(
+                                onTap: () {
+                                  Navigator.of(context).push(
+                                    MaterialPageRoute(
+                                      builder: (context) => SendParcelScreen(onOrderPlaced: _refresh),
+                                    ),
+                                  );
+                                },
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                                  child: const Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                     children: [
-                                      Text(
-                                        'Send a parcel',
-                                        style: TextStyle(
-                                          color: Colors.white,
-                                          fontWeight: FontWeight.w800,
-                                          fontSize: 16,
-                                        ),
-                                      ),
-                                      SizedBox(height: 4),
-                                      Text(
-                                        'We pick up and ship via your preferred courier',
-                                        style: TextStyle(
-                                          color: Color(0xFFDBEAFE),
-                                          fontSize: 11,
-                                          height: 1.3,
-                                        ),
-                                        maxLines: 3,
-                                        overflow: TextOverflow.ellipsis,
+                                      Text('📤', style: TextStyle(fontSize: 36)),
+                                      Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            'Send a parcel',
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                              fontWeight: FontWeight.w800,
+                                              fontSize: 16,
+                                            ),
+                                          ),
+                                          SizedBox(height: 4),
+                                          Text(
+                                            'We pick up and ship via your preferred courier',
+                                            style: TextStyle(
+                                              color: Color(0xFFDBEAFE),
+                                              fontSize: 11,
+                                              height: 1.3,
+                                            ),
+                                            maxLines: 3,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ],
                                       ),
                                     ],
                                   ),
-                                ],
+                                ),
                               ),
                             ),
                           ),
@@ -223,58 +229,64 @@ class _HomeScreenState extends State<HomeScreen> {
                         const SizedBox(width: 14),
                         // Receive a parcel
                         Expanded(
-                          child: GestureDetector(
-                            onTap: () {
-                              Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder: (context) => ReceiveParcelScreen(onOrderPlaced: _refresh),
-                                ),
-                              );
-                            },
-                            child: Container(
-                              height: 170,
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                              decoration: BoxDecoration(
-                                color: AppColors.accent,
+                          child: Container(
+                            height: 170,
+                            decoration: BoxDecoration(
+                              color: AppColors.accent,
+                              borderRadius: BorderRadius.circular(20),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: AppColors.accent.withOpacity(0.2),
+                                  blurRadius: 16,
+                                  offset: const Offset(0, 8),
+                                )
+                              ],
+                            ),
+                            child: Material(
+                              color: Colors.transparent,
+                              child: InkWell(
                                 borderRadius: BorderRadius.circular(20),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: AppColors.accent.withOpacity(0.2),
-                                    blurRadius: 16,
-                                    offset: const Offset(0, 8),
-                                  )
-                                ],
-                              ),
-                              child: const Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text('📥', style: TextStyle(fontSize: 36)),
-                                  Column(
+                                onTap: () {
+                                  Navigator.of(context).push(
+                                    MaterialPageRoute(
+                                      builder: (context) => ReceiveParcelScreen(onOrderPlaced: _refresh),
+                                    ),
+                                  );
+                                },
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                                  child: const Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                     children: [
-                                      Text(
-                                        'Receive a parcel',
-                                        style: TextStyle(
-                                          color: Colors.white,
-                                          fontWeight: FontWeight.w800,
-                                          fontSize: 16,
-                                        ),
-                                      ),
-                                      SizedBox(height: 4),
-                                      Text(
-                                        'Collect a parcel stuck at a courier office',
-                                        style: TextStyle(
-                                          color: Color(0xFFFEF3C7),
-                                          fontSize: 11,
-                                          height: 1.3,
-                                        ),
-                                        maxLines: 3,
-                                        overflow: TextOverflow.ellipsis,
+                                      Text('📥', style: TextStyle(fontSize: 36)),
+                                      Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            'Receive a parcel',
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                              fontWeight: FontWeight.w800,
+                                              fontSize: 16,
+                                            ),
+                                          ),
+                                          SizedBox(height: 4),
+                                          Text(
+                                            'Collect a parcel stuck at a courier office',
+                                            style: TextStyle(
+                                              color: Color(0xFFFEF3C7),
+                                              fontSize: 11,
+                                              height: 1.3,
+                                            ),
+                                            maxLines: 3,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ],
                                       ),
                                     ],
                                   ),
-                                ],
+                                ),
                               ),
                             ),
                           ),

@@ -254,8 +254,14 @@ class SendParcelNotifier extends ChangeNotifier {
       final pickup = _addresses.firstWhere((a) => a.id == effectivePickupId);
       if (_deliveryPin == null) throw ApiException('Pinpoint the delivery location on the map');
 
-      final fromPin = pickup.pincode ?? _newPickupPincode ?? '680001';
-      final toPin = _deliveryPincode.isNotEmpty ? _deliveryPincode : _deliveryPin!.pincode;
+      final fromPin = (pickup.pincode != null && pickup.pincode!.isNotEmpty)
+          ? pickup.pincode!
+          : (_newPickupPincode.isNotEmpty ? _newPickupPincode : '680001');
+      final toPin = _deliveryPincode.isNotEmpty
+          ? _deliveryPincode
+          : ((_deliveryPin?.pincode != null && _deliveryPin!.pincode.isNotEmpty)
+              ? _deliveryPin!.pincode
+              : '680001');
 
       final resQuotes = await ApiClient.request(
         '/quotes',

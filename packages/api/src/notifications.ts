@@ -1,6 +1,7 @@
 import { env } from './env';
 import { query } from './db';
 import { sendPushToAgent } from './push';
+import { broadcastToOrder } from './io';
 
 const DEV = !env.MSG91_AUTH_KEY;
 
@@ -106,6 +107,9 @@ function agentMessage(o: OrderRow, event: OrderEvent): string | null {
 
 export async function notifyOrderEvent(orderId: string, event: OrderEvent) {
   try {
+    // Broadcast status change immediately to all connected clients tracking this order
+    broadcastToOrder(orderId, 'status_changed', { status: event });
+
     const o = await loadOrder(orderId);
     if (!o) return;
     const cust = customerMessage(o, event);

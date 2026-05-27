@@ -14,8 +14,10 @@ import adminRouter from './routes/admin';
 import paymentsRouter, { webhookHandler } from './routes/payments';
 import configRouter from './routes/config';
 import { dispatchSweep } from './dispatch';
+import { initializeSocket } from './io';
 
 const app = express();
+initializeSocket();
 
 if (env.TRUST_PROXY) app.set('trust proxy', true);
 

@@ -13,6 +13,10 @@ export const env = {
   RAZORPAY_KEY_ID: process.env.RAZORPAY_KEY_ID ?? '',
   RAZORPAY_KEY_SECRET: process.env.RAZORPAY_KEY_SECRET ?? '',
   RAZORPAY_WEBHOOK_SECRET: process.env.RAZORPAY_WEBHOOK_SECRET ?? '',
+  PUSHER_APP_ID: process.env.PUSHER_APP_ID ?? '',
+  PUSHER_KEY: process.env.PUSHER_KEY ?? '',
+  PUSHER_SECRET: process.env.PUSHER_SECRET ?? '',
+  PUSHER_CLUSTER: process.env.PUSHER_CLUSTER ?? 'ap2',
   // Firebase Admin SDK — pick whichever is easier per environment.
   // PATH = filesystem path to service-account JSON (best for local dev,
   // never commit the file). JSON = the entire JSON inlined as one env var
