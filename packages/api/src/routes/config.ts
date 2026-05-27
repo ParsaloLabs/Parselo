@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { listServiceAreas } from '../serviceArea';
 
 const router = Router();
 
@@ -13,6 +14,13 @@ router.get('/pricing', (_req, res) => {
     same_day_delivery_fee_paise: 3000,
     gst_rate: 0.18,
   });
+});
+
+// Active service areas — mobile app pre-validates pin drops against this list
+// so the out-of-zone sheet appears instantly without a round-trip.
+router.get('/service-areas', async (_req, res) => {
+  const areas = await listServiceAreas();
+  res.json({ areas });
 });
 
 export default router;

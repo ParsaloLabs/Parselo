@@ -6,6 +6,7 @@ import { priceReceiveOrder, priceSendOrder } from '../pricing';
 import { generateOrderCode } from '../orderCode';
 import { notifyOrderEvent } from '../notifications';
 import { buildAuthorizationPdf } from '../pdf';
+import { isInServiceArea } from '../serviceArea';
 
 const router = Router();
 
@@ -68,6 +69,15 @@ router.post('/', requireAuth(['user']), async (req, res) => {
     const pLat = pickupRows[0].latitude !== null ? Number(pickupRows[0].latitude) : null;
     const pLng = pickupRows[0].longitude !== null ? Number(pickupRows[0].longitude) : null;
 
+    // Service-area gate: pickup must be inside an active zone. No coords ⇒
+    // can't verify ⇒ force the customer back into the map picker.
+    if (pLat === null || pLng === null) {
+      return res.status(409).json({ error: 'pickup_address_missing_coords' });
+    }
+    if (!(await isInServiceArea(pLat, pLng))) {
+      return res.status(409).json({ error: 'pickup_out_of_service_area' });
+    }
+
     const { rows: branchRows } = await query<{ id: string }>(
       pLat !== null && pLng !== null
         ? `SELECT id FROM courier_branches
@@ -109,6 +119,25 @@ router.post('/', requireAuth(['user']), async (req, res) => {
   }
 
   const d = parsed.data;
+
+  // Service-area gate: for receive orders, the agent's last hop is the
+  // customer's delivery address — that's what must sit inside an active zone.
+  const { rows: deliveryRows } = await query<{ latitude: string | null; longitude: string | null }>(
+    `SELECT latitude, longitude FROM addresses WHERE id = $1 AND user_id = $2`,
+    [d.delivery_address_id, userId],
+  );
+  if (deliveryRows.length === 0) {
+    return res.status(400).json({ error: 'delivery_address_not_found' });
+  }
+  const dLat = deliveryRows[0].latitude !== null ? Number(deliveryRows[0].latitude) : null;
+  const dLng = deliveryRows[0].longitude !== null ? Number(deliveryRows[0].longitude) : null;
+  if (dLat === null || dLng === null) {
+    return res.status(409).json({ error: 'pickup_address_missing_coords' });
+  }
+  if (!(await isInServiceArea(dLat, dLng))) {
+    return res.status(409).json({ error: 'pickup_out_of_service_area' });
+  }
+
   const price = priceReceiveOrder({ delivery_fee_paise: d.same_day ? 3000 : 0 });
   const { rows } = await query(
     `INSERT INTO orders (

@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { api } from '../../../lib/api';
 import SignaturePad, { SignaturePadHandle } from '../../../components/SignaturePad';
 import MapPicker, { PickedLocation } from '../../../components/MapPicker';
+import OutOfServiceArea from '../../../components/OutOfServiceArea';
+import { loadServiceAreas, isInServiceArea, nearestServiceArea } from '../../../lib/serviceArea';
 
 async function compressImage(file: File, maxDim = 1200, quality = 0.75): Promise<string> {
   const url = URL.createObjectURL(file);
@@ -51,6 +53,7 @@ export default function ReceivePage() {
   const [deliveryId, setDeliveryId] = useState('');
   const [newDelivery, setNewDelivery] = useState({ full_address: '', pincode: '' });
   const [deliveryPin, setDeliveryPin] = useState<PickedLocation | null>(null);
+  const [outOfArea, setOutOfArea] = useState<{ city: string | null } | null>(null);
   const [sameDay, setSameDay] = useState(false);
 
   const sigRef = useRef<SignaturePadHandle>(null);
@@ -72,6 +75,7 @@ export default function ReceivePage() {
   };
 
   useEffect(() => {
+    loadServiceAreas();
     api<Courier[]>('/couriers').then(setCouriers).catch(() => {});
     api<Address[]>('/addresses').then((rows) => {
       setAddresses(rows);
@@ -143,6 +147,11 @@ export default function ReceivePage() {
 
   return (
     <div className="max-w-2xl mx-auto">
+      <OutOfServiceArea
+        open={outOfArea !== null}
+        nearestCityName={outOfArea?.city}
+        onClose={() => setOutOfArea(null)}
+      />
       <div className="flex items-center gap-2 mb-6 text-sm text-slate-500">
         <Link href="/home" className="hover:text-slate-900">← Home</Link>
         <span>/</span>
@@ -217,6 +226,11 @@ export default function ReceivePage() {
                 accentClass="#F59E0B"
                 value={deliveryPin}
                 onChange={(loc) => {
+                  if (!isInServiceArea(loc.lat, loc.lng)) {
+                    const nearest = nearestServiceArea(loc.lat, loc.lng);
+                    setOutOfArea({ city: nearest?.name ?? null });
+                    return;
+                  }
                   setDeliveryPin(loc);
                   setNewDelivery((d) => ({
                     full_address: d.full_address || loc.full_address,

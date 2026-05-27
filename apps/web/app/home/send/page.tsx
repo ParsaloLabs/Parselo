@@ -3,7 +3,9 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { api } from '../../../lib/api';
+import { loadServiceAreas, isInServiceArea, nearestServiceArea } from '../../../lib/serviceArea';
 import MapPicker, { PickedLocation } from '../../../components/MapPicker';
+import OutOfServiceArea from '../../../components/OutOfServiceArea';
 
 type Address = {
   id: string; label?: string | null; full_address: string;
@@ -27,6 +29,9 @@ export default function SendPage() {
   const [newPickup, setNewPickup] = useState({ full_address: '', pincode: '' });
   const [pickupPin, setPickupPin] = useState<PickedLocation | null>(null);
   const [deliveryPin, setDeliveryPin] = useState<PickedLocation | null>(null);
+  const [outOfArea, setOutOfArea] = useState<{ city: string | null } | null>(null);
+
+  useEffect(() => { loadServiceAreas(); }, []);
 
   const [parcelType, setParcelType] = useState('Documents');
   const [weight, setWeight] = useState('1');
@@ -129,6 +134,11 @@ export default function SendPage() {
 
   return (
     <div className="max-w-2xl mx-auto">
+      <OutOfServiceArea
+        open={outOfArea !== null}
+        nearestCityName={outOfArea?.city}
+        onClose={() => setOutOfArea(null)}
+      />
       <div className="flex items-center gap-2 mb-6 text-sm text-slate-500">
         <Link href="/home" className="hover:text-slate-900">← Home</Link>
         <span>/</span>
@@ -183,6 +193,11 @@ export default function SendPage() {
                   label="Pin the pickup spot"
                   value={pickupPin}
                   onChange={(loc) => {
+                    if (!isInServiceArea(loc.lat, loc.lng)) {
+                      const nearest = nearestServiceArea(loc.lat, loc.lng);
+                      setOutOfArea({ city: nearest?.name ?? null });
+                      return;
+                    }
                     setPickupPin(loc);
                     setNewPickup((p) => ({
                       full_address: p.full_address || loc.full_address,

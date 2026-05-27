@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'core/config/pricing_config.dart';
+import 'core/config/service_area_config.dart';
 import 'core/storage/token_store.dart';
 import 'core/theme/theme.dart';
 import 'features/auth/presentation/auth_notifier.dart';
@@ -13,6 +14,7 @@ void main() async {
   await TokenStore.init();
   // Fire-and-forget: defaults match backend, so UI is usable before this returns.
   unawaited(PricingConfig.instance.load());
+  unawaited(ServiceAreaConfig.instance.load());
   runApp(const MyApp());
 }
 

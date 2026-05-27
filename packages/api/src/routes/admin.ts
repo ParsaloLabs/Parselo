@@ -7,6 +7,7 @@ import { requireAuth } from '../auth';
 import { env } from '../env';
 import { notifyOrderEvent } from '../notifications';
 import { invalidateDispatchConfigCache } from '../dispatch';
+import { invalidateServiceAreaCache } from '../serviceArea';
 
 const router = Router();
 
@@ -246,6 +247,77 @@ router.post('/dispatch-config', requireAuth(['admin']), async (req, res) => {
   );
   invalidateDispatchConfigCache();
   res.json(rows[0]);
+});
+
+// Service areas — admin can add/edit/disable zones where Parsalo agents operate.
+// Order-create gates pickup (send) / delivery (receive) against active rows.
+router.get('/service-areas', requireAuth(['admin']), async (_req, res) => {
+  const { rows } = await query<{
+    id: string;
+    name: string;
+    center_lat: string;
+    center_lng: string;
+    radius_m: number;
+    is_active: boolean;
+    updated_at: string;
+  }>(
+    `SELECT id, name, center_lat, center_lng, radius_m, is_active, updated_at
+       FROM service_areas
+       ORDER BY name`,
+  );
+  res.json(
+    rows.map((r) => ({
+      id: r.id,
+      name: r.name,
+      center_lat: Number(r.center_lat),
+      center_lng: Number(r.center_lng),
+      radius_m: r.radius_m,
+      is_active: r.is_active,
+      updated_at: r.updated_at,
+    })),
+  );
+});
+
+const serviceAreaSchema = z.object({
+  id: z.string().uuid().optional(),
+  name: z.string().trim().min(2).max(60),
+  center_lat: z.number().min(-90).max(90),
+  center_lng: z.number().min(-180).max(180),
+  radius_m: z.number().int().min(500).max(200_000),
+  is_active: z.boolean().optional().default(true),
+});
+
+router.post('/service-areas', requireAuth(['admin']), async (req, res) => {
+  const adminId = (req.principal as any).adminId;
+  const parsed = serviceAreaSchema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: 'invalid_input', issues: parsed.error.issues });
+  const { id, name, center_lat, center_lng, radius_m, is_active } = parsed.data;
+
+  const { rows } = id
+    ? await query<{ id: string }>(
+        `UPDATE service_areas
+            SET name = $1, center_lat = $2, center_lng = $3, radius_m = $4,
+                is_active = $5, updated_at = NOW(), updated_by = $6
+          WHERE id = $7
+          RETURNING id`,
+        [name, center_lat, center_lng, radius_m, is_active, adminId, id],
+      )
+    : await query<{ id: string }>(
+        `INSERT INTO service_areas (name, center_lat, center_lng, radius_m, is_active, updated_by)
+         VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
+        [name, center_lat, center_lng, radius_m, is_active, adminId],
+      );
+
+  if (rows.length === 0) return res.status(404).json({ error: 'not_found' });
+  invalidateServiceAreaCache();
+  res.json({ id: rows[0].id });
+});
+
+router.delete('/service-areas/:id', requireAuth(['admin']), async (req, res) => {
+  const { rowCount } = await query(`DELETE FROM service_areas WHERE id = $1`, [req.params.id]);
+  if (rowCount === 0) return res.status(404).json({ error: 'not_found' });
+  invalidateServiceAreaCache();
+  res.json({ ok: true });
 });
 
 export default router;

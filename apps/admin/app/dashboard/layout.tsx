@@ -9,6 +9,7 @@ const links = [
   { href: '/dashboard/orders', label: 'Orders' },
   { href: '/dashboard/agents', label: 'Agents' },
   { href: '/dashboard/agents/pending', label: 'Agent applications' },
+  { href: '/dashboard/service-areas', label: 'Service areas' },
   { href: '/dashboard/settings', label: 'Settings' },
 ];
 

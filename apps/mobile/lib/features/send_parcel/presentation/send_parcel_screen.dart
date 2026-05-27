@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import '../../../core/theme/theme.dart';
+import '../../../core/config/service_area_config.dart';
 import '../../../core/widgets/brand_button.dart';
 import '../../../core/widgets/glass_card.dart';
 import '../../../core/widgets/map_selection_dialog.dart';
+import '../../../core/widgets/out_of_service_area_sheet.dart';
 import '../../payments/presentation/payment_screen.dart';
 import 'send_parcel_notifier.dart';
 
@@ -141,6 +143,16 @@ class _SendParcelScreenState extends State<SendParcelScreen> {
                           ),
                         );
                         if (loc != null) {
+                          if (!ServiceAreaConfig.instance.isInside(loc.lat, loc.lng)) {
+                            if (!mounted) return;
+                            final nearest = ServiceAreaConfig.instance.nearest(loc.lat, loc.lng);
+                            OutOfServiceAreaSheet.show(
+                              context,
+                              nearestCityName: nearest?.name,
+                              onPickAgain: () {},
+                            );
+                            return;
+                          }
                           _notifier.setPickupPin(loc);
                           if (_pickupPincodeCtrl.text.trim().isEmpty && loc.pincode.isNotEmpty) {
                             _pickupPincodeCtrl.text = loc.pincode;
