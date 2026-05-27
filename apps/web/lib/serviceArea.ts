@@ -11,7 +11,10 @@ import { api } from './api';
 // and the office list in one round-trip — cached after the first load so the
 // out-of-zone modal appears instantly on every pin drop.
 
-export const SERVICE_RADIUS_M = 15_000;
+// Default radius — used until the /config response lands, and as a fallback
+// when the endpoint is unreachable. Admin can override via the flag.
+export const DEFAULT_RADIUS_M = 15_000;
+export const SERVICE_RADIUS_M = DEFAULT_RADIUS_M;
 
 export type CourierOffice = {
   id: string;
@@ -42,6 +45,7 @@ const FALLBACK_OFFICES: CourierOffice[] = [
 let officeCache: CourierOffice[] = FALLBACK_OFFICES;
 let districtCache: string[] = ['thrissur'];
 let radiusEnabledCache = false;
+let radiusMCache: number = DEFAULT_RADIUS_M;
 let loaded = false;
 let inflight: Promise<void> | null = null;
 
@@ -91,6 +95,8 @@ export async function loadCourierOffices(): Promise<void> {
         );
       }
       radiusEnabledCache = res?.radius_gate_enabled === true;
+      const rm = Number(res?.radius_m);
+      if (Number.isFinite(rm) && rm > 0) radiusMCache = rm;
       loaded = true;
     } catch {
       // Stay on fallback so Thrissur still works offline / on first load.
@@ -105,7 +111,7 @@ export function isInServiceArea(
   lat: number,
   lng: number,
   district: string | null | undefined,
-  radiusM: number = SERVICE_RADIUS_M,
+  radiusM: number = radiusMCache,
 ): boolean {
   const pinDistrict = normalizeDistrict(district);
   if (!pinDistrict) {
@@ -124,7 +130,7 @@ export function isInServiceArea(
   return false;
 }
 
-export function nearbyOffices(lat: number, lng: number, radiusM: number = SERVICE_RADIUS_M): RankedOffice[] {
+export function nearbyOffices(lat: number, lng: number, radiusM: number = radiusMCache): RankedOffice[] {
   const ranked: RankedOffice[] = [];
   for (const o of officeCache) {
     const d = distanceMeters(lat, lng, o.latitude, o.longitude);
@@ -150,4 +156,8 @@ export function nearestServiceArea(lat: number, lng: number): { name: string } |
 
 export function isRadiusGateEnabled(): boolean {
   return radiusEnabledCache;
+}
+
+export function currentServiceRadiusM(): number {
+  return radiusMCache;
 }

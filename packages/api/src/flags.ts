@@ -54,3 +54,10 @@ export async function setFlag(key: string, value: unknown): Promise<void> {
 }
 
 export const FLAG_RADIUS_ENABLED = 'service_area_radius_enabled';
+export const FLAG_RADIUS_M = 'service_area_radius_m';
+
+export async function getNumberFlag(key: string, fallback: number): Promise<number> {
+  const v = await getFlag<unknown>(key, fallback);
+  const n = typeof v === 'number' ? v : Number(v);
+  return Number.isFinite(n) && n > 0 ? n : fallback;
+}

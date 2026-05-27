@@ -42,7 +42,13 @@ class ServiceAreaConfig {
   ServiceAreaConfig._();
   static final ServiceAreaConfig instance = ServiceAreaConfig._();
 
-  static const double serviceRadiusM = 15000;
+  // Default — used as the fallback when the /config response is missing or
+  // unreachable. Admin can override via the service_area_radius_m flag.
+  static const double defaultRadiusM = 15000;
+
+  // Kept for callers that still reference the constant. Returns the
+  // *configured* radius once loaded, default otherwise.
+  static double get serviceRadiusM => instance._radiusM;
 
   // Fallback so a cold offline boot still gates correctly — treats Thrissur
   // town hall as a single pseudo-office. Fail-safe inward, never fail-open.
@@ -61,10 +67,12 @@ class ServiceAreaConfig {
   List<CourierOffice> _offices = _fallback;
   List<String> _districts = const ['thrissur'];
   bool _radiusEnabled = false;
+  double _radiusM = defaultRadiusM;
   bool _loaded = false;
 
   bool get isLoaded => _loaded;
   bool get radiusGateEnabled => _radiusEnabled;
+  double get configuredRadiusM => _radiusM;
   List<CourierOffice> get offices => List.unmodifiable(_offices);
   List<String> get serviceableDistricts => List.unmodifiable(_districts);
 
@@ -116,6 +124,8 @@ class ServiceAreaConfig {
               .toList();
         }
         _radiusEnabled = res['radius_gate_enabled'] == true;
+        final rm = (res['radius_m'] as num?)?.toDouble();
+        if (rm != null && rm > 0) _radiusM = rm;
         _loaded = true;
       }
     } catch (_) {
@@ -126,14 +136,15 @@ class ServiceAreaConfig {
   /// Single gate the screens should call. District first, then radius if the
   /// admin has flipped the flag. Empty district falls back to radius-only so a
   /// geocoder hiccup doesn't lock customers out.
-  bool isServiceable(double lat, double lng, String? district, {double radiusM = serviceRadiusM}) {
+  bool isServiceable(double lat, double lng, String? district, {double? radiusM}) {
+    final r = radiusM ?? _radiusM;
     final pinDistrict = normalizeDistrict(district);
     if (pinDistrict.isEmpty) {
-      return _withinRadius(lat, lng, radiusM);
+      return _withinRadius(lat, lng, r);
     }
     if (!_districts.contains(pinDistrict)) return false;
     if (!_radiusEnabled) return true;
-    return _withinRadius(lat, lng, radiusM);
+    return _withinRadius(lat, lng, r);
   }
 
   bool _withinRadius(double lat, double lng, double radiusM) {
@@ -147,15 +158,16 @@ class ServiceAreaConfig {
 
   // Kept for compatibility with screens that still call isInside without the
   // district. Mirrors the radius-only check.
-  bool isInside(double lat, double lng, {double radiusM = serviceRadiusM}) {
-    return _withinRadius(lat, lng, radiusM);
+  bool isInside(double lat, double lng, {double? radiusM}) {
+    return _withinRadius(lat, lng, radiusM ?? _radiusM);
   }
 
-  List<RankedOffice> nearby(double lat, double lng, {double radiusM = serviceRadiusM}) {
+  List<RankedOffice> nearby(double lat, double lng, {double? radiusM}) {
+    final r = radiusM ?? _radiusM;
     final ranked = <RankedOffice>[];
     for (final o in _offices) {
       final d = _distanceMeters(lat, lng, o.latitude, o.longitude);
-      if (d <= radiusM) ranked.add(RankedOffice(o, d));
+      if (d <= r) ranked.add(RankedOffice(o, d));
     }
     ranked.sort((a, b) => a.distanceM.compareTo(b.distanceM));
     return ranked;

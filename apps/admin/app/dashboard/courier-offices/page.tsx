@@ -48,6 +48,9 @@ export default function CourierOfficesPage() {
   const [couriers, setCouriers] = useState<Courier[]>([]);
   const [radiusEnabled, setRadiusEnabled] = useState<boolean | null>(null);
   const [togglingRadius, setTogglingRadius] = useState(false);
+  const [radiusKm, setRadiusKm] = useState<string>('15');
+  const [radiusKmSaved, setRadiusKmSaved] = useState<string>('15');
+  const [savingRadius, setSavingRadius] = useState(false);
   const [form, setForm] = useState<FormState>(emptyForm);
   const [saving, setSaving] = useState(false);
   const [locating, setLocating] = useState(false);
@@ -63,6 +66,11 @@ export default function CourierOfficesPage() {
     setBranches(b);
     setCouriers(c);
     setRadiusEnabled(flags?.service_area_radius_enabled === true);
+    const rawRadius = flags?.service_area_radius_m;
+    const meters = typeof rawRadius === 'number' ? rawRadius : Number(rawRadius);
+    const km = Number.isFinite(meters) && meters > 0 ? String(meters / 1000) : '15';
+    setRadiusKm(km);
+    setRadiusKmSaved(km);
     if (!form.courier_id && c.length > 0) {
       setForm((f) => ({ ...f, courier_id: c[0].id }));
     }
@@ -83,6 +91,27 @@ export default function CourierOfficesPage() {
       setError(e.message);
     } finally {
       setTogglingRadius(false);
+    }
+  };
+
+  const saveRadius = async () => {
+    const km = parseFloat(radiusKm);
+    if (!Number.isFinite(km) || km <= 0) {
+      setError('Radius must be a positive number of kilometres.');
+      return;
+    }
+    setSavingRadius(true);
+    setError(null);
+    try {
+      await api('/admin/flags/service_area_radius_m', {
+        method: 'PUT',
+        body: { value: Math.round(km * 1000) },
+      });
+      setRadiusKmSaved(String(km));
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setSavingRadius(false);
     }
   };
 
@@ -197,37 +226,65 @@ export default function CourierOfficesPage() {
         nearest one from this list, ranked by distance from their pickup pin.
       </p>
 
-      <div className="bg-white border border-slate-200 rounded-xl p-5 mb-6 flex items-start gap-4">
-        <div className="flex-1">
-          <div className="text-sm font-semibold text-slate-800">15 km radius gate</div>
-          <p className="text-xs text-slate-500 mt-1 leading-relaxed">
-            <strong>Off (default):</strong> any pin in a district where we have ≥1 active office is in-zone — district-wide gating.<br />
-            <strong>On:</strong> stricter — pin must also be within 15 km of an active office. Use this when launching a single neighborhood inside a larger district.
-          </p>
-        </div>
-        <button
-          type="button"
-          onClick={toggleRadius}
-          disabled={togglingRadius || radiusEnabled === null}
-          className={`shrink-0 inline-flex items-center gap-2 px-4 py-2 rounded-md text-sm font-semibold border transition ${
-            radiusEnabled
-              ? 'bg-brand text-white border-brand'
-              : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'
-          } disabled:opacity-60`}
-        >
-          <span
-            className={`inline-block w-8 h-4 rounded-full relative transition ${
-              radiusEnabled ? 'bg-white/30' : 'bg-slate-300'
-            }`}
+      <div className="bg-white border border-slate-200 rounded-xl p-5 mb-6 space-y-4">
+        <div className="flex items-start gap-4">
+          <div className="flex-1">
+            <div className="text-sm font-semibold text-slate-800">Radius gate</div>
+            <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+              <strong>Off (default):</strong> any pin in a district where we have ≥1 active office is in-zone — district-wide gating.<br />
+              <strong>On:</strong> stricter — pin must also be within the radius below of an active office. Use this when launching a single neighborhood inside a larger district.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={toggleRadius}
+            disabled={togglingRadius || radiusEnabled === null}
+            className={`shrink-0 inline-flex items-center gap-2 px-4 py-2 rounded-md text-sm font-semibold border transition ${
+              radiusEnabled
+                ? 'bg-brand text-white border-brand'
+                : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'
+            } disabled:opacity-60`}
           >
             <span
-              className={`absolute top-0.5 w-3 h-3 rounded-full bg-white transition ${
-                radiusEnabled ? 'left-4' : 'left-0.5'
+              className={`inline-block w-8 h-4 rounded-full relative transition ${
+                radiusEnabled ? 'bg-white/30' : 'bg-slate-300'
               }`}
+            >
+              <span
+                className={`absolute top-0.5 w-3 h-3 rounded-full bg-white transition ${
+                  radiusEnabled ? 'left-4' : 'left-0.5'
+                }`}
+              />
+            </span>
+            {radiusEnabled === null ? '…' : radiusEnabled ? 'Radius ON' : 'Radius OFF'}
+          </button>
+        </div>
+
+        <div className="border-t border-slate-100 pt-4 flex items-end gap-3">
+          <div className="flex-1">
+            <label className="block text-xs font-medium text-slate-700 mb-1">Radius (km)</label>
+            <p className="text-xs text-slate-500 mb-2">
+              Only applied when the toggle above is ON. Changes take effect within ~10 s on all clients.
+            </p>
+            <input
+              type="number"
+              min="0.5"
+              step="0.5"
+              value={radiusKm}
+              onChange={(e) => setRadiusKm(e.target.value)}
+              disabled={!radiusEnabled && radiusEnabled !== false /* still allow editing when off */}
+              className="w-32 border border-slate-200 rounded-lg px-3 py-2 text-sm font-mono"
             />
-          </span>
-          {radiusEnabled === null ? '…' : radiusEnabled ? 'Radius ON' : 'Radius OFF'}
-        </button>
+          </div>
+          <button
+            type="button"
+            onClick={saveRadius}
+            disabled={savingRadius || radiusKm === radiusKmSaved}
+            className="shrink-0 bg-slate-900 text-white text-sm font-semibold px-4 py-2 rounded-md hover:opacity-90 disabled:opacity-50"
+          >
+            {savingRadius ? 'Saving…' : radiusKm === radiusKmSaved ? 'Saved' : 'Save radius'}
+          </button>
+        </div>
       </div>
 
       <div className="bg-white border border-slate-200 rounded-xl overflow-hidden mb-8">

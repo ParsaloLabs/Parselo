@@ -12,9 +12,18 @@
 // Same 10s in-process cache as before for both office and flag reads.
 
 import { query } from './db';
-import { getBoolFlag, FLAG_RADIUS_ENABLED } from './flags';
+import { getBoolFlag, getNumberFlag, FLAG_RADIUS_ENABLED, FLAG_RADIUS_M } from './flags';
 
-export const SERVICE_RADIUS_M = 15_000;
+// Default radius — used as the fallback when the feature_flags row is
+// missing/invalid, and as a sane initial value for new installs.
+export const DEFAULT_RADIUS_M = 15_000;
+
+// Back-compat alias for older imports.
+export const SERVICE_RADIUS_M = DEFAULT_RADIUS_M;
+
+export async function getServiceRadiusM(): Promise<number> {
+  return getNumberFlag(FLAG_RADIUS_M, DEFAULT_RADIUS_M);
+}
 
 export type CourierOffice = {
   id: string;
@@ -117,13 +126,14 @@ export type RankedOffice = CourierOffice & { distance_m: number };
 export async function findNearbyOffices(
   lat: number,
   lng: number,
-  radiusM: number = SERVICE_RADIUS_M,
+  radiusM?: number,
 ): Promise<RankedOffice[]> {
+  const effectiveRadius = radiusM ?? (await getServiceRadiusM());
   const offices = await listCourierOffices();
   const ranked: RankedOffice[] = [];
   for (const o of offices) {
     const d = distanceMeters(lat, lng, o.latitude, o.longitude);
-    if (d <= radiusM) ranked.push({ ...o, distance_m: Math.round(d) });
+    if (d <= effectiveRadius) ranked.push({ ...o, distance_m: Math.round(d) });
   }
   ranked.sort((a, b) => a.distance_m - b.distance_m);
   return ranked;
@@ -132,11 +142,12 @@ export async function findNearbyOffices(
 export async function hasNearbyOffice(
   lat: number,
   lng: number,
-  radiusM: number = SERVICE_RADIUS_M,
+  radiusM?: number,
 ): Promise<boolean> {
+  const effectiveRadius = radiusM ?? (await getServiceRadiusM());
   const offices = await listCourierOffices();
   for (const o of offices) {
-    if (distanceMeters(lat, lng, o.latitude, o.longitude) <= radiusM) return true;
+    if (distanceMeters(lat, lng, o.latitude, o.longitude) <= effectiveRadius) return true;
   }
   return false;
 }

@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { findNearbyOffices, listCourierOffices, listServiceableDistricts, SERVICE_RADIUS_M } from '../serviceArea';
+import { findNearbyOffices, getServiceRadiusM, listCourierOffices, listServiceableDistricts } from '../serviceArea';
 import { getBoolFlag, FLAG_RADIUS_ENABLED } from '../flags';
 
 const router = Router();
@@ -21,13 +21,14 @@ router.get('/pricing', (_req, res) => {
 // local Haversine on every pin drop, so the "out-of-zone" sheet appears
 // instantly without a server round-trip.
 router.get('/courier-offices', async (_req, res) => {
-  const [offices, districts, radiusEnabled] = await Promise.all([
+  const [offices, districts, radiusEnabled, radiusM] = await Promise.all([
     listCourierOffices(),
     listServiceableDistricts(),
     getBoolFlag(FLAG_RADIUS_ENABLED, false),
+    getServiceRadiusM(),
   ]);
   res.json({
-    radius_m: SERVICE_RADIUS_M,
+    radius_m: radiusM,
     radius_gate_enabled: radiusEnabled,
     serviceable_districts: districts,
     offices,
@@ -44,7 +45,7 @@ router.get('/nearby-courier-offices', async (req, res) => {
     return res.status(400).json({ error: 'invalid_coords' });
   }
   const radiusRaw = Number(req.query.radius_m);
-  const radiusM = Number.isFinite(radiusRaw) && radiusRaw > 0 ? radiusRaw : SERVICE_RADIUS_M;
+  const radiusM = Number.isFinite(radiusRaw) && radiusRaw > 0 ? radiusRaw : await getServiceRadiusM();
   const offices = await findNearbyOffices(lat, lng, radiusM);
   res.json({ radius_m: radiusM, offices });
 });
