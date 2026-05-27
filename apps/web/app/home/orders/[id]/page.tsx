@@ -4,6 +4,10 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { api, downloadFile, STATUS_LABEL } from '../../../../lib/api';
 import AgentMap from '../../../../components/AgentMap';
+import Pusher from 'pusher-js';
+
+const PUSHER_KEY = process.env.NEXT_PUBLIC_PUSHER_KEY ?? 'your_pusher_key';
+const PUSHER_CLUSTER = process.env.NEXT_PUBLIC_PUSHER_CLUSTER ?? 'ap2';
 
 type HistoryEntry = { status: string; notes?: string | null; changed_by_type: string; created_at: string };
 type AgentInfo = { name: string; phone: string; lat: number | null; lng: number | null };
@@ -35,6 +39,7 @@ export default function OrderDetailPage() {
   const router = useRouter();
   const params = useParams<{ id: string }>();
   const [order, setOrder] = useState<Order | null>(null);
+  const [liveLocation, setLiveLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [cancelling, setCancelling] = useState(false);
   const [actionBusy, setActionBusy] = useState(false);
@@ -49,6 +54,33 @@ export default function OrderDetailPage() {
     return () => clearInterval(t);
     /* eslint-disable-next-line react-hooks/exhaustive-deps */
   }, [order?.status]);
+
+  useEffect(() => {
+    if (!order || TERMINAL.has(order.status)) return;
+
+    console.log(`[pusher] Connecting to order-${order.id} using key: ${PUSHER_KEY}`);
+    const pusher = new Pusher(PUSHER_KEY, {
+      cluster: PUSHER_CLUSTER,
+    });
+
+    const channel = pusher.subscribe(`order-${order.id}`);
+    
+    channel.bind('location_received', (data: { lat: number; lng: number }) => {
+      console.log('[pusher] location_received', data);
+      setLiveLocation({ lat: data.lat, lng: data.lng });
+    });
+
+    channel.bind('status_changed', (data: { status: string }) => {
+      console.log('[pusher] status_changed', data);
+      load();
+    });
+
+    return () => {
+      channel.unbind_all();
+      pusher.unsubscribe(`order-${order.id}`);
+      pusher.disconnect();
+    };
+  }, [order?.id, order?.status]);
 
   if (error) return <div className="text-red-600">{error}</div>;
   if (!order) return <div className="text-slate-500">Loading…</div>;
@@ -156,7 +188,13 @@ export default function OrderDetailPage() {
       )}
 
       {TRACKING_STATES.has(order.status) && order.agent?.lat != null && order.agent.lng != null && (
-        <AgentMap agent={{ name: order.agent.name, lat: order.agent.lat, lng: order.agent.lng }} />
+        <AgentMap
+          agent={{
+            name: order.agent.name,
+            lat: liveLocation?.lat ?? Number(order.agent.lat),
+            lng: liveLocation?.lng ?? Number(order.agent.lng),
+          }}
+        />
       )}
 
       {!cancelled && order.payment_status !== 'paid' && (
