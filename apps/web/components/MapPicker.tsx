@@ -31,6 +31,7 @@ export type PickedLocation = {
   lng: number;
   full_address: string;
   pincode: string;
+  district: string;
 };
 
 type Props = {
@@ -45,6 +46,18 @@ function extractPincode(result: any): string {
   const comps = result?.address_components ?? [];
   const pin = comps.find((c: any) => c.types?.includes('postal_code'));
   return pin?.long_name ?? '';
+}
+
+// In India, Google returns the district as administrative_area_level_2
+// (e.g. "Thrissur"). administrative_area_level_3 is the taluk; level_1 is the
+// state. Some rural pins return only level_3 — fall back to it as a last
+// resort so we don't return blank.
+function extractDistrict(result: any): string {
+  const comps = result?.address_components ?? [];
+  const lvl2 = comps.find((c: any) => c.types?.includes('administrative_area_level_2'));
+  if (lvl2?.long_name) return lvl2.long_name;
+  const lvl3 = comps.find((c: any) => c.types?.includes('administrative_area_level_3'));
+  return lvl3?.long_name ?? '';
 }
 
 export default function MapPicker({
@@ -94,17 +107,18 @@ export default function MapPicker({
 
   const reverseAndEmit = (lat: number, lng: number) => {
     if (!geocoderRef.current) {
-      onChange({ lat, lng, full_address: value?.full_address ?? '', pincode: value?.pincode ?? '' });
+      onChange({ lat, lng, full_address: value?.full_address ?? '', pincode: value?.pincode ?? '', district: value?.district ?? '' });
       return;
     }
     geocoderRef.current.geocode({ location: { lat, lng } }, (results: any[], status: string) => {
       if (status === 'OK' && results?.[0]) {
         const addr = results[0].formatted_address ?? '';
         const pin = extractPincode(results[0]);
+        const district = extractDistrict(results[0]);
         setSearchText(addr);
-        onChange({ lat, lng, full_address: addr, pincode: pin });
+        onChange({ lat, lng, full_address: addr, pincode: pin, district });
       } else {
-        onChange({ lat, lng, full_address: value?.full_address ?? '', pincode: value?.pincode ?? '' });
+        onChange({ lat, lng, full_address: value?.full_address ?? '', pincode: value?.pincode ?? '', district: value?.district ?? '' });
       }
     });
   };
@@ -144,9 +158,10 @@ export default function MapPicker({
           const lng = p.geometry.location.lng();
           const addr = p.formatted_address ?? '';
           const pin = extractPincode(p);
+          const district = extractDistrict(p);
           place(lat, lng);
           setSearchText(addr);
-          onChange({ lat, lng, full_address: addr, pincode: pin });
+          onChange({ lat, lng, full_address: addr, pincode: pin, district });
         });
       }
 

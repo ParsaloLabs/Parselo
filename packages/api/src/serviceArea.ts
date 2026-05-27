@@ -1,15 +1,18 @@
-// Service-area gate, redefined.
+// Service-area gate.
 //
-// "Where do we operate?" is now derived from the courier_branches table.
-// A pickup/delivery address is serviceable iff there is at least one active
-// courier office within SERVICE_RADIUS_M of it. That way adding a new office
-// in another city automatically opens the zone — admin manages one list, not
-// two.
+// Primary check is district-wise: a pin is in-zone iff its (reverse-geocoded)
+// district matches a district where we have ≥1 active courier office. That
+// way "where we operate" stays in lockstep with courier_branches.
 //
-// Same 10s in-process cache pattern as before so the order-create hot path
-// doesn't re-read the table on every request.
+// Optional stricter check is the 15 km radius — toggleable via the
+// `service_area_radius_enabled` feature flag. Useful when launching a single
+// neighborhood and we don't want to claim the whole district yet.
+//
+// Order of checks: district first (cheap, fail-fast), then radius if enabled.
+// Same 10s in-process cache as before for both office and flag reads.
 
 import { query } from './db';
+import { getBoolFlag, FLAG_RADIUS_ENABLED } from './flags';
 
 export const SERVICE_RADIUS_M = 15_000;
 
@@ -69,6 +72,29 @@ export async function listCourierOffices(): Promise<CourierOffice[]> {
   }
 }
 
+// Normalize for district comparison: trim, lowercase, drop punctuation/whitespace
+// runs. Reverse-geocoded labels often vary on case and surrounding text
+// ("Thrissur District" vs "Thrissur") — keep the comparison forgiving so an
+// admin who types "Thrissur" in the office row still matches.
+export function normalizeDistrict(d: string | null | undefined): string {
+  if (!d) return '';
+  return d
+    .toLowerCase()
+    .replace(/\s+district$/i, '')
+    .replace(/[^a-z0-9]+/g, '')
+    .trim();
+}
+
+export async function listServiceableDistricts(): Promise<string[]> {
+  const offices = await listCourierOffices();
+  const set = new Set<string>();
+  for (const o of offices) {
+    const n = normalizeDistrict(o.district);
+    if (n) set.add(n);
+  }
+  return Array.from(set);
+}
+
 // Haversine distance in metres.
 export function distanceMeters(
   lat1: number,
@@ -113,4 +139,32 @@ export async function hasNearbyOffice(
     if (distanceMeters(lat, lng, o.latitude, o.longitude) <= radiusM) return true;
   }
   return false;
+}
+
+// The single gate the order-create path should call. Combines the district
+// check (always on) with the radius check (flag-gated). Reverse-geocoded
+// district from the client may be null on geocoder failure — when that
+// happens we fall back to "any office within radius" as a soft pass so we
+// don't lock customers out due to a geocoder hiccup.
+export async function isPinServiceable(
+  lat: number,
+  lng: number,
+  district: string | null | undefined,
+): Promise<boolean> {
+  const radiusOn = await getBoolFlag(FLAG_RADIUS_ENABLED, false);
+  const districts = await listServiceableDistricts();
+  const pinDistrict = normalizeDistrict(district);
+
+  let districtOk: boolean;
+  if (pinDistrict) {
+    districtOk = districts.includes(pinDistrict);
+  } else {
+    // Geocoder didn't give us a district — fall back to radius regardless of
+    // the flag, so we still gate but don't false-reject.
+    districtOk = await hasNearbyOffice(lat, lng);
+    return districtOk;
+  }
+  if (!districtOk) return false;
+  if (!radiusOn) return true;
+  return await hasNearbyOffice(lat, lng);
 }

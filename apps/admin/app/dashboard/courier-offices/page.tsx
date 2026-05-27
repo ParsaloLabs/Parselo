@@ -46,6 +46,8 @@ const emptyForm: FormState = {
 export default function CourierOfficesPage() {
   const [branches, setBranches] = useState<Branch[] | null>(null);
   const [couriers, setCouriers] = useState<Courier[]>([]);
+  const [radiusEnabled, setRadiusEnabled] = useState<boolean | null>(null);
+  const [togglingRadius, setTogglingRadius] = useState(false);
   const [form, setForm] = useState<FormState>(emptyForm);
   const [saving, setSaving] = useState(false);
   const [locating, setLocating] = useState(false);
@@ -53,14 +55,34 @@ export default function CourierOfficesPage() {
   const [savedAt, setSavedAt] = useState<string | null>(null);
 
   const load = async () => {
-    const [b, c] = await Promise.all([
+    const [b, c, flags] = await Promise.all([
       api<Branch[]>('/admin/courier-branches'),
       api<Courier[]>('/couriers', { auth: false }),
+      api<Record<string, unknown>>('/admin/flags'),
     ]);
     setBranches(b);
     setCouriers(c);
+    setRadiusEnabled(flags?.service_area_radius_enabled === true);
     if (!form.courier_id && c.length > 0) {
       setForm((f) => ({ ...f, courier_id: c[0].id }));
+    }
+  };
+
+  const toggleRadius = async () => {
+    if (radiusEnabled === null) return;
+    setTogglingRadius(true);
+    setError(null);
+    const next = !radiusEnabled;
+    try {
+      await api('/admin/flags/service_area_radius_enabled', {
+        method: 'PUT',
+        body: { value: next },
+      });
+      setRadiusEnabled(next);
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setTogglingRadius(false);
     }
   };
 
@@ -174,6 +196,39 @@ export default function CourierOfficesPage() {
         Physical drop-off offices (DTDC, Bluedart, etc.). Customers placing a send order pick the
         nearest one from this list, ranked by distance from their pickup pin.
       </p>
+
+      <div className="bg-white border border-slate-200 rounded-xl p-5 mb-6 flex items-start gap-4">
+        <div className="flex-1">
+          <div className="text-sm font-semibold text-slate-800">15 km radius gate</div>
+          <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+            <strong>Off (default):</strong> any pin in a district where we have ≥1 active office is in-zone — district-wide gating.<br />
+            <strong>On:</strong> stricter — pin must also be within 15 km of an active office. Use this when launching a single neighborhood inside a larger district.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={toggleRadius}
+          disabled={togglingRadius || radiusEnabled === null}
+          className={`shrink-0 inline-flex items-center gap-2 px-4 py-2 rounded-md text-sm font-semibold border transition ${
+            radiusEnabled
+              ? 'bg-brand text-white border-brand'
+              : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'
+          } disabled:opacity-60`}
+        >
+          <span
+            className={`inline-block w-8 h-4 rounded-full relative transition ${
+              radiusEnabled ? 'bg-white/30' : 'bg-slate-300'
+            }`}
+          >
+            <span
+              className={`absolute top-0.5 w-3 h-3 rounded-full bg-white transition ${
+                radiusEnabled ? 'left-4' : 'left-0.5'
+              }`}
+            />
+          </span>
+          {radiusEnabled === null ? '…' : radiusEnabled ? 'Radius ON' : 'Radius OFF'}
+        </button>
+      </div>
 
       <div className="bg-white border border-slate-200 rounded-xl overflow-hidden mb-8">
         <table className="w-full text-sm">

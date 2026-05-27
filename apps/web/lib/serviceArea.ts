@@ -1,9 +1,15 @@
 import { api } from './api';
 
-// A location is serviceable iff at least one active courier office sits
-// within SERVICE_RADIUS_M of it. Clients cache the full office list once and
-// run a local Haversine on every pin drop, so the "out-of-zone" sheet
-// appears instantly without a server round-trip.
+// Service-area gate, client-side.
+//
+// Primary check is district-wise: a pin is in-zone iff its reverse-geocoded
+// district matches a district where we have ≥1 active courier office.
+// Optional 15 km radius is layered on top when the admin flips
+// `service_area_radius_enabled`.
+//
+// The config endpoint ships the flag value, the serviceable district set,
+// and the office list in one round-trip — cached after the first load so the
+// out-of-zone modal appears instantly on every pin drop.
 
 export const SERVICE_RADIUS_M = 15_000;
 
@@ -21,7 +27,7 @@ export type RankedOffice = CourierOffice & { distance_m: number };
 
 // Fallback so a cold offline boot still gates correctly — treats Thrissur
 // town hall as a single pseudo-office. Fail-safe inward, never fail-open.
-const FALLBACK: CourierOffice[] = [
+const FALLBACK_OFFICES: CourierOffice[] = [
   {
     id: 'fallback-thrissur',
     courier_name: 'Parsalo',
@@ -33,9 +39,20 @@ const FALLBACK: CourierOffice[] = [
   },
 ];
 
-let cache: CourierOffice[] = FALLBACK;
+let officeCache: CourierOffice[] = FALLBACK_OFFICES;
+let districtCache: string[] = ['thrissur'];
+let radiusEnabledCache = false;
 let loaded = false;
 let inflight: Promise<void> | null = null;
+
+function normalizeDistrict(d: string | null | undefined): string {
+  if (!d) return '';
+  return d
+    .toLowerCase()
+    .replace(/\s+district$/i, '')
+    .replace(/[^a-z0-9]+/g, '')
+    .trim();
+}
 
 function distanceMeters(lat1: number, lng1: number, lat2: number, lng2: number): number {
   const R = 6_371_000;
@@ -53,17 +70,27 @@ export async function loadCourierOffices(): Promise<void> {
   if (inflight) return inflight;
   inflight = (async () => {
     try {
-      const res = await api<{ offices: CourierOffice[]; radius_m: number }>(
-        '/config/courier-offices',
-        { auth: false },
-      );
+      const res = await api<{
+        offices: CourierOffice[];
+        radius_m: number;
+        radius_gate_enabled?: boolean;
+        serviceable_districts?: string[];
+      }>('/config/courier-offices', { auth: false });
       if (res?.offices?.length) {
-        cache = res.offices.map((o) => ({
+        officeCache = res.offices.map((o) => ({
           ...o,
           latitude: Number(o.latitude),
           longitude: Number(o.longitude),
         }));
       }
+      if (res?.serviceable_districts?.length) {
+        districtCache = res.serviceable_districts;
+      } else {
+        districtCache = Array.from(
+          new Set(officeCache.map((o) => normalizeDistrict(o.district)).filter(Boolean)),
+        );
+      }
+      radiusEnabledCache = res?.radius_gate_enabled === true;
       loaded = true;
     } catch {
       // Stay on fallback so Thrissur still works offline / on first load.
@@ -74,8 +101,24 @@ export async function loadCourierOffices(): Promise<void> {
   return inflight;
 }
 
-export function isInServiceArea(lat: number, lng: number, radiusM: number = SERVICE_RADIUS_M): boolean {
-  for (const o of cache) {
+export function isInServiceArea(
+  lat: number,
+  lng: number,
+  district: string | null | undefined,
+  radiusM: number = SERVICE_RADIUS_M,
+): boolean {
+  const pinDistrict = normalizeDistrict(district);
+  if (!pinDistrict) {
+    // Geocoder gave us nothing — fall back to radius regardless of flag so we
+    // still gate but don't false-reject.
+    for (const o of officeCache) {
+      if (distanceMeters(lat, lng, o.latitude, o.longitude) <= radiusM) return true;
+    }
+    return false;
+  }
+  if (!districtCache.includes(pinDistrict)) return false;
+  if (!radiusEnabledCache) return true;
+  for (const o of officeCache) {
     if (distanceMeters(lat, lng, o.latitude, o.longitude) <= radiusM) return true;
   }
   return false;
@@ -83,7 +126,7 @@ export function isInServiceArea(lat: number, lng: number, radiusM: number = SERV
 
 export function nearbyOffices(lat: number, lng: number, radiusM: number = SERVICE_RADIUS_M): RankedOffice[] {
   const ranked: RankedOffice[] = [];
-  for (const o of cache) {
+  for (const o of officeCache) {
     const d = distanceMeters(lat, lng, o.latitude, o.longitude);
     if (d <= radiusM) ranked.push({ ...o, distance_m: Math.round(d) });
   }
@@ -92,15 +135,19 @@ export function nearbyOffices(lat: number, lng: number, radiusM: number = SERVIC
 }
 
 export function nearestServiceArea(lat: number, lng: number): { name: string } | null {
-  if (cache.length === 0) return null;
-  let best = cache[0];
+  if (officeCache.length === 0) return null;
+  let best = officeCache[0];
   let bestD = distanceMeters(lat, lng, best.latitude, best.longitude);
-  for (let i = 1; i < cache.length; i++) {
-    const d = distanceMeters(lat, lng, cache[i].latitude, cache[i].longitude);
+  for (let i = 1; i < officeCache.length; i++) {
+    const d = distanceMeters(lat, lng, officeCache[i].latitude, officeCache[i].longitude);
     if (d < bestD) {
       bestD = d;
-      best = cache[i];
+      best = officeCache[i];
     }
   }
   return { name: best.district ?? best.courier_name };
+}
+
+export function isRadiusGateEnabled(): boolean {
+  return radiusEnabledCache;
 }

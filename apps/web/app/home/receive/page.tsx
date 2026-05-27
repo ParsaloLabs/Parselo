@@ -113,6 +113,7 @@ export default function ReceivePage() {
             latitude: deliveryPin.lat,
             longitude: deliveryPin.lng,
             pincode: pin || undefined,
+            district: deliveryPin.district || undefined,
             is_default: addresses.length === 0,
           },
         });
@@ -226,7 +227,7 @@ export default function ReceivePage() {
                 accentClass="#F59E0B"
                 value={deliveryPin}
                 onChange={(loc) => {
-                  if (!isInServiceArea(loc.lat, loc.lng)) {
+                  if (!isInServiceArea(loc.lat, loc.lng, loc.district)) {
                     const nearest = nearestServiceArea(loc.lat, loc.lng);
                     setOutOfArea({ city: nearest?.name ?? null });
                     return;

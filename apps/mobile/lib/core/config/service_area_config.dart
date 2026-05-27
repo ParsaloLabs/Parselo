@@ -1,10 +1,16 @@
 import 'dart:math' as math;
 import '../network/api_client.dart';
 
-/// A location is serviceable iff at least one active courier office sits
-/// within [SERVICE_RADIUS_M] of it. The full office list is cached after the
-/// first /config/courier-offices fetch so the picker can run synchronously on
-/// every pin drop.
+/// Service-area gate, client-side.
+///
+/// Primary check is district-wise: a pin is in-zone iff its reverse-geocoded
+/// district matches a district where we have ≥1 active courier office.
+/// Optional 15 km radius is layered on top when admin flips the
+/// `service_area_radius_enabled` flag.
+///
+/// The full office list + flag + serviceable-district set come back in a
+/// single /config/courier-offices fetch and live in memory after that, so
+/// every pin drop runs synchronously.
 class CourierOffice {
   final String id;
   final String courierName;
@@ -53,9 +59,21 @@ class ServiceAreaConfig {
   ];
 
   List<CourierOffice> _offices = _fallback;
+  List<String> _districts = const ['thrissur'];
+  bool _radiusEnabled = false;
   bool _loaded = false;
+
   bool get isLoaded => _loaded;
+  bool get radiusGateEnabled => _radiusEnabled;
   List<CourierOffice> get offices => List.unmodifiable(_offices);
+  List<String> get serviceableDistricts => List.unmodifiable(_districts);
+
+  static String normalizeDistrict(String? d) {
+    if (d == null) return '';
+    final lower = d.toLowerCase();
+    final stripped = lower.replaceAll(RegExp(r'\s+district$'), '');
+    return stripped.replaceAll(RegExp(r'[^a-z0-9]+'), '').trim();
+  }
 
   Future<void> load() async {
     try {
@@ -84,6 +102,20 @@ class ServiceAreaConfig {
         if (parsed.isNotEmpty) {
           _offices = parsed;
         }
+        if (res['serviceable_districts'] is List) {
+          _districts = (res['serviceable_districts'] as List)
+              .whereType<String>()
+              .map(normalizeDistrict)
+              .where((s) => s.isNotEmpty)
+              .toList();
+        } else {
+          _districts = _offices
+              .map((o) => normalizeDistrict(o.district))
+              .where((s) => s.isNotEmpty)
+              .toSet()
+              .toList();
+        }
+        _radiusEnabled = res['radius_gate_enabled'] == true;
         _loaded = true;
       }
     } catch (_) {
@@ -91,13 +123,32 @@ class ServiceAreaConfig {
     }
   }
 
-  bool isInside(double lat, double lng, {double radiusM = serviceRadiusM}) {
+  /// Single gate the screens should call. District first, then radius if the
+  /// admin has flipped the flag. Empty district falls back to radius-only so a
+  /// geocoder hiccup doesn't lock customers out.
+  bool isServiceable(double lat, double lng, String? district, {double radiusM = serviceRadiusM}) {
+    final pinDistrict = normalizeDistrict(district);
+    if (pinDistrict.isEmpty) {
+      return _withinRadius(lat, lng, radiusM);
+    }
+    if (!_districts.contains(pinDistrict)) return false;
+    if (!_radiusEnabled) return true;
+    return _withinRadius(lat, lng, radiusM);
+  }
+
+  bool _withinRadius(double lat, double lng, double radiusM) {
     for (final o in _offices) {
       if (_distanceMeters(lat, lng, o.latitude, o.longitude) <= radiusM) {
         return true;
       }
     }
     return false;
+  }
+
+  // Kept for compatibility with screens that still call isInside without the
+  // district. Mirrors the radius-only check.
+  bool isInside(double lat, double lng, {double radiusM = serviceRadiusM}) {
+    return _withinRadius(lat, lng, radiusM);
   }
 
   List<RankedOffice> nearby(double lat, double lng, {double radiusM = serviceRadiusM}) {

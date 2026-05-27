@@ -72,6 +72,7 @@ export default function SendPage() {
             latitude: pickupPin.lat,
             longitude: pickupPin.lng,
             pincode: pin || undefined,
+            district: pickupPin.district || undefined,
             is_default: addresses.length === 0,
           },
         });
@@ -193,7 +194,7 @@ export default function SendPage() {
                   label="Pin the pickup spot"
                   value={pickupPin}
                   onChange={(loc) => {
-                    if (!isInServiceArea(loc.lat, loc.lng)) {
+                    if (!isInServiceArea(loc.lat, loc.lng, loc.district)) {
                       const nearest = nearestServiceArea(loc.lat, loc.lng);
                       setOutOfArea({ city: nearest?.name ?? null });
                       return;

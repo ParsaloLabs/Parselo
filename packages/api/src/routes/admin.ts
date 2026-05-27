@@ -8,6 +8,7 @@ import { env } from '../env';
 import { notifyOrderEvent } from '../notifications';
 import { invalidateDispatchConfigCache } from '../dispatch';
 import { invalidateServiceAreaCache } from '../serviceArea';
+import { getAllFlags, setFlag } from '../flags';
 
 const router = Router();
 
@@ -407,6 +408,18 @@ router.delete('/courier-branches/:id', requireAuth(['admin']), async (req, res) 
     [req.params.id],
   );
   if (rowCount === 0) return res.status(404).json({ error: 'not_found' });
+  res.json({ ok: true });
+});
+
+router.get('/flags', requireAuth(['admin']), async (_req, res) => {
+  res.json(await getAllFlags());
+});
+
+router.put('/flags/:key', requireAuth(['admin']), async (req, res) => {
+  const schema = z.object({ value: z.any() });
+  const parsed = schema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: 'invalid_input' });
+  await setFlag(req.params.key, parsed.data.value);
   res.json({ ok: true });
 });
 

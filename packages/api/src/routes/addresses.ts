@@ -22,6 +22,7 @@ router.post('/', requireAuth(['user']), async (req, res) => {
     latitude: z.number().optional().nullable(),
     longitude: z.number().optional().nullable(),
     pincode: z.string().min(4).max(10).optional().nullable(),
+    district: z.string().max(100).optional().nullable(),
     is_default: z.boolean().optional().nullable(),
   });
   const parsed = schema.safeParse(req.body);
@@ -32,9 +33,9 @@ router.post('/', requireAuth(['user']), async (req, res) => {
     await query(`UPDATE addresses SET is_default = FALSE WHERE user_id = $1`, [userId]);
   }
   const { rows } = await query(
-    `INSERT INTO addresses (user_id, label, full_address, latitude, longitude, pincode, is_default)
-       VALUES ($1, $2, $3, $4, $5, $6, COALESCE($7, FALSE)) RETURNING *`,
-    [userId, a.label ?? null, a.full_address, a.latitude ?? null, a.longitude ?? null, a.pincode ?? null, a.is_default ?? false],
+    `INSERT INTO addresses (user_id, label, full_address, latitude, longitude, pincode, district, is_default)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, COALESCE($8, FALSE)) RETURNING *`,
+    [userId, a.label ?? null, a.full_address, a.latitude ?? null, a.longitude ?? null, a.pincode ?? null, a.district ?? null, a.is_default ?? false],
   );
   res.status(201).json(rows[0]);
 });

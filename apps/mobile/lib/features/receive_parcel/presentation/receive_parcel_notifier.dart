@@ -242,6 +242,7 @@ class ReceiveParcelNotifier extends ChangeNotifier {
             'latitude': _deliveryPin!.lat,
             'longitude': _deliveryPin!.lng,
             'pincode': pin.isNotEmpty ? pin : null,
+            'district': _deliveryPin!.district.isNotEmpty ? _deliveryPin!.district : null,
             'is_default': _addresses.isEmpty,
           },
         );

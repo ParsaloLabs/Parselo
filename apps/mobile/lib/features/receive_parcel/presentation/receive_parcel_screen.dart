@@ -200,7 +200,7 @@ class _ReceiveParcelScreenState extends State<ReceiveParcelScreen> {
                                 ),
                               );
                               if (loc != null) {
-                                if (!ServiceAreaConfig.instance.isInside(loc.lat, loc.lng)) {
+                                if (!ServiceAreaConfig.instance.isServiceable(loc.lat, loc.lng, loc.district)) {
                                   if (!mounted) return;
                                   final nearest = ServiceAreaConfig.instance.nearest(loc.lat, loc.lng);
                                   OutOfServiceAreaSheet.show(

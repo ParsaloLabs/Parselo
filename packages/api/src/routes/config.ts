@@ -1,5 +1,6 @@
 import { Router } from 'express';
-import { findNearbyOffices, listCourierOffices, SERVICE_RADIUS_M } from '../serviceArea';
+import { findNearbyOffices, listCourierOffices, listServiceableDistricts, SERVICE_RADIUS_M } from '../serviceArea';
+import { getBoolFlag, FLAG_RADIUS_ENABLED } from '../flags';
 
 const router = Router();
 
@@ -20,8 +21,17 @@ router.get('/pricing', (_req, res) => {
 // local Haversine on every pin drop, so the "out-of-zone" sheet appears
 // instantly without a server round-trip.
 router.get('/courier-offices', async (_req, res) => {
-  const offices = await listCourierOffices();
-  res.json({ radius_m: SERVICE_RADIUS_M, offices });
+  const [offices, districts, radiusEnabled] = await Promise.all([
+    listCourierOffices(),
+    listServiceableDistricts(),
+    getBoolFlag(FLAG_RADIUS_ENABLED, false),
+  ]);
+  res.json({
+    radius_m: SERVICE_RADIUS_M,
+    radius_gate_enabled: radiusEnabled,
+    serviceable_districts: districts,
+    offices,
+  });
 });
 
 // Server-ranked nearby list. The customer-side picker can call this with the

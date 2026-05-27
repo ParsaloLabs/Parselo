@@ -241,6 +241,7 @@ class SendParcelNotifier extends ChangeNotifier {
             'latitude': _pickupPin!.lat,
             'longitude': _pickupPin!.lng,
             'pincode': pin.isNotEmpty ? pin : null,
+            'district': _pickupPin!.district.isNotEmpty ? _pickupPin!.district : null,
             'is_default': _addresses.isEmpty,
           },
         );

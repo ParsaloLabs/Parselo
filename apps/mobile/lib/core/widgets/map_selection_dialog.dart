@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:geocoding/geocoding.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../theme/theme.dart';
 import 'brand_button.dart';
@@ -8,12 +9,14 @@ class PickedLocation {
   final double lng;
   final String fullAddress;
   final String pincode;
+  final String district;
 
   PickedLocation({
     required this.lat,
     required this.lng,
     required this.fullAddress,
     required this.pincode,
+    this.district = '',
   });
 }
 
@@ -37,6 +40,8 @@ class _MapSelectionDialogState extends State<MapSelectionDialog> {
   bool _loadingAddress = false;
   late String _currentAddress;
   late String _currentPincode;
+  late String _currentDistrict;
+  int _resolveSeq = 0;
 
   @override
   void initState() {
@@ -46,10 +51,12 @@ class _MapSelectionDialogState extends State<MapSelectionDialog> {
       _selectedLatLng = LatLng(init.lat, init.lng);
       _currentAddress = init.fullAddress;
       _currentPincode = init.pincode;
+      _currentDistrict = init.district;
     } else {
       _selectedLatLng = const LatLng(10.5276, 76.2144); // Thrissur Center
       _currentAddress = 'Thrissur, Kerala';
       _currentPincode = '680001';
+      _currentDistrict = 'Thrissur';
     }
   }
 
@@ -63,22 +70,45 @@ class _MapSelectionDialogState extends State<MapSelectionDialog> {
     _resolveAddress();
   }
 
+  // Real reverse geocoding via platform geocoder (iOS CLGeocoder /
+  // Android Geocoder — no API key needed). subAdministrativeArea is the
+  // district in India. We sequence-guard so a stale callback can't clobber
+  // the result of a newer pin drop.
   Future<void> _resolveAddress() async {
+    final mySeq = ++_resolveSeq;
     setState(() {
       _loadingAddress = true;
     });
-    
-    // Simulate reverse geocoding using LatLng to get pincode & address
-    await Future.delayed(const Duration(milliseconds: 600));
-    
-    // Create a realistic-looking local address in Thrissur based on coordinates
-    if (mounted) {
+    try {
+      final placemarks = await placemarkFromCoordinates(
+        _selectedLatLng.latitude,
+        _selectedLatLng.longitude,
+      );
+      if (!mounted || mySeq != _resolveSeq) return;
+      if (placemarks.isEmpty) {
+        setState(() {
+          _loadingAddress = false;
+        });
+        return;
+      }
+      final p = placemarks.first;
+      final parts = <String>[
+        if ((p.name ?? '').isNotEmpty) p.name!,
+        if ((p.subLocality ?? '').isNotEmpty) p.subLocality!,
+        if ((p.locality ?? '').isNotEmpty) p.locality!,
+        if ((p.subAdministrativeArea ?? '').isNotEmpty) p.subAdministrativeArea!,
+        if ((p.administrativeArea ?? '').isNotEmpty) p.administrativeArea!,
+      ];
       setState(() {
         _loadingAddress = false;
-        // Generate simulated pincodes based on minor lat/lng variations to test logic
-        final isEast = _selectedLatLng.longitude > 76.2144;
-        _currentPincode = isEast ? '680002' : '680001';
-        _currentAddress = 'Street no ${(_selectedLatLng.latitude * 1000 % 20).toStringAsFixed(0)}, Round North, Thrissur, Kerala';
+        _currentAddress = parts.join(', ');
+        _currentPincode = (p.postalCode ?? '').trim();
+        _currentDistrict = (p.subAdministrativeArea ?? '').trim();
+      });
+    } catch (_) {
+      if (!mounted || mySeq != _resolveSeq) return;
+      setState(() {
+        _loadingAddress = false;
       });
     }
   }
@@ -204,6 +234,7 @@ class _MapSelectionDialogState extends State<MapSelectionDialog> {
                               lng: _selectedLatLng.longitude,
                               fullAddress: _currentAddress,
                               pincode: _currentPincode,
+                              district: _currentDistrict,
                             ),
                           );
                         },
