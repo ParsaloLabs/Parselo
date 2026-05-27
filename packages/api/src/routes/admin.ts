@@ -320,4 +320,94 @@ router.delete('/service-areas/:id', requireAuth(['admin']), async (req, res) => 
   res.json({ ok: true });
 });
 
+// Courier branches — physical offices (DTDC Round North etc.) that customers
+// can choose as the drop point for send orders. Admin maintains the list;
+// customer flow ranks them by distance from the pickup pin at order time.
+router.get('/courier-branches', requireAuth(['admin']), async (_req, res) => {
+  const { rows } = await query<{
+    id: string;
+    courier_id: string;
+    courier_name: string;
+    name: string | null;
+    district: string | null;
+    full_address: string;
+    latitude: string | null;
+    longitude: string | null;
+    pincode: string | null;
+    phone: string | null;
+    opening_hours: string | null;
+  }>(
+    `SELECT b.id, b.courier_id, c.name AS courier_name, b.name, b.district,
+            b.full_address, b.latitude, b.longitude, b.pincode, b.phone, b.opening_hours
+       FROM courier_branches b
+       JOIN couriers c ON c.id = b.courier_id
+      ORDER BY c.name, b.district NULLS LAST, b.name NULLS LAST`,
+  );
+  res.json(
+    rows.map((r) => ({
+      id: r.id,
+      courier_id: r.courier_id,
+      courier_name: r.courier_name,
+      name: r.name,
+      district: r.district,
+      full_address: r.full_address,
+      latitude: r.latitude !== null ? Number(r.latitude) : null,
+      longitude: r.longitude !== null ? Number(r.longitude) : null,
+      pincode: r.pincode,
+      phone: r.phone,
+      opening_hours: r.opening_hours,
+    })),
+  );
+});
+
+const courierBranchSchema = z.object({
+  id: z.string().uuid().optional(),
+  courier_id: z.string().uuid(),
+  name: z.string().trim().min(2).max(255),
+  district: z.string().trim().min(2).max(80),
+  full_address: z.string().trim().min(5).max(500),
+  latitude: z.number().min(-90).max(90),
+  longitude: z.number().min(-180).max(180),
+  pincode: z.string().trim().regex(/^\d{6}$/),
+  phone: z.string().trim().max(15).optional().or(z.literal('')),
+  opening_hours: z.string().trim().max(120).optional().or(z.literal('')),
+});
+
+router.post('/courier-branches', requireAuth(['admin']), async (req, res) => {
+  const parsed = courierBranchSchema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: 'invalid_input', issues: parsed.error.issues });
+  const { id, courier_id, name, district, full_address, latitude, longitude, pincode } = parsed.data;
+  const phone = parsed.data.phone?.trim() || null;
+  const opening_hours = parsed.data.opening_hours?.trim() || null;
+
+  const { rows } = id
+    ? await query<{ id: string }>(
+        `UPDATE courier_branches
+            SET courier_id = $1, name = $2, district = $3, full_address = $4,
+                latitude = $5, longitude = $6, pincode = $7, phone = $8, opening_hours = $9
+          WHERE id = $10
+          RETURNING id`,
+        [courier_id, name, district, full_address, latitude, longitude, pincode, phone, opening_hours, id],
+      )
+    : await query<{ id: string }>(
+        `INSERT INTO courier_branches
+           (courier_id, name, district, full_address, latitude, longitude, pincode, phone, opening_hours)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+         RETURNING id`,
+        [courier_id, name, district, full_address, latitude, longitude, pincode, phone, opening_hours],
+      );
+
+  if (rows.length === 0) return res.status(404).json({ error: 'not_found' });
+  res.json({ id: rows[0].id });
+});
+
+router.delete('/courier-branches/:id', requireAuth(['admin']), async (req, res) => {
+  const { rowCount } = await query(
+    `DELETE FROM courier_branches WHERE id = $1`,
+    [req.params.id],
+  );
+  if (rowCount === 0) return res.status(404).json({ error: 'not_found' });
+  res.json({ ok: true });
+});
+
 export default router;

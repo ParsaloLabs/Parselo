@@ -5,7 +5,7 @@ INSERT INTO couriers (name, api_provider, is_active) VALUES
   ('Delhivery', 'shiprocket', TRUE),
   ('BlueDart', 'shiprocket', TRUE),
   ('India Post', 'manual', TRUE)
-ON CONFLICT DO NOTHING;
+ON CONFLICT (name) DO NOTHING;
 
 -- Thrissur branches (representative addresses)
 INSERT INTO courier_branches (courier_id, name, full_address, latitude, longitude, pincode, phone, opening_hours)

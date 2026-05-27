@@ -10,6 +10,7 @@ const links = [
   { href: '/dashboard/agents', label: 'Agents' },
   { href: '/dashboard/agents/pending', label: 'Agent applications' },
   { href: '/dashboard/service-areas', label: 'Service areas' },
+  { href: '/dashboard/courier-offices', label: 'Courier offices' },
   { href: '/dashboard/settings', label: 'Settings' },
 ];
 
