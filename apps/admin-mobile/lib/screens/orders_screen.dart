@@ -14,6 +14,15 @@ class OrdersScreen extends ConsumerStatefulWidget {
 }
 
 class _OrdersScreenState extends ConsumerState<OrdersScreen> {
+  final _searchController = TextEditingController();
+  String _searchQuery = '';
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
   final List<Map<String, String>> _statusFilters = [
     {'label': 'All', 'value': 'all'},
     {'label': 'Pending', 'value': 'pending'},
@@ -79,57 +88,99 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
           ),
         ),
       ),
-      body: feedState.when(
-        data: (orders) {
-          if (orders.isEmpty) {
-            return const Center(
-              child: Text(
-                'No orders match this status.',
-                style: TextStyle(color: BrandColors.textMuted),
-              ),
-            );
-          }
-          return RefreshIndicator(
-            onRefresh: () async {
-              await ref.read(ordersFeedProvider.notifier).refresh();
-            },
-            child: ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: orders.length,
-              itemBuilder: (context, idx) {
-                final order = orders[idx];
-                return _OrderCard(order: order);
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: TextField(
+              controller: _searchController,
+              onChanged: (val) {
+                setState(() {
+                  _searchQuery = val.trim().toLowerCase();
+                });
               },
-            ),
-          );
-        },
-        loading: () => const Center(
-          child: CircularProgressIndicator(
-            valueColor: AlwaysStoppedAnimation<Color>(BrandColors.accentOrange),
-          ),
-        ),
-        error: (err, _) => Center(
-          child: Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(Icons.error_outline, size: 48, color: Colors.red),
-                const SizedBox(height: 12),
-                Text(
-                  'Failed to fetch orders: $err',
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(color: BrandColors.textMuted),
-                ),
-                const SizedBox(height: 16),
-                ElevatedButton(
-                  onPressed: () => ref.read(ordersFeedProvider.notifier).refresh(),
-                  child: const Text('Retry'),
-                ),
-              ],
+              decoration: InputDecoration(
+                hintText: 'Search by Order ID...',
+                prefixIcon: const Icon(Icons.search, color: BrandColors.textMuted),
+                suffixIcon: _searchQuery.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear),
+                        onPressed: () {
+                          _searchController.clear();
+                          setState(() {
+                            _searchQuery = '';
+                          });
+                        },
+                      )
+                    : null,
+              ),
             ),
           ),
-        ),
+          Expanded(
+            child: feedState.when(
+              data: (orders) {
+                final filtered = orders
+                    .where((o) => o.orderCode.toLowerCase().contains(_searchQuery))
+                    .toList();
+
+                if (filtered.isEmpty) {
+                  return Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(32.0),
+                      child: Text(
+                        _searchQuery.isEmpty
+                            ? 'No orders match this status.'
+                            : 'No orders match your search.',
+                        style: const TextStyle(color: BrandColors.textMuted),
+                      ),
+                    ),
+                  );
+                }
+
+                return RefreshIndicator(
+                  onRefresh: () async {
+                    await ref.read(ordersFeedProvider.notifier).refresh();
+                  },
+                  child: ListView.builder(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    itemCount: filtered.length,
+                    itemBuilder: (context, idx) {
+                      final order = filtered[idx];
+                      return _OrderCard(order: order);
+                    },
+                  ),
+                );
+              },
+              loading: () => const Center(
+                child: CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(BrandColors.accentOrange),
+                ),
+              ),
+              error: (err, _) => Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(24.0),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.error_outline, size: 48, color: Colors.red),
+                      const SizedBox(height: 12),
+                      Text(
+                        'Failed to fetch orders: $err',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(color: BrandColors.textMuted),
+                      ),
+                      const SizedBox(height: 16),
+                      ElevatedButton(
+                        onPressed: () => ref.read(ordersFeedProvider.notifier).refresh(),
+                        child: const Text('Retry'),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

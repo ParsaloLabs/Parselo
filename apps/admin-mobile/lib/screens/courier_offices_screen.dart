@@ -14,11 +14,14 @@ class CourierOfficesScreen extends ConsumerStatefulWidget {
 
 class _CourierOfficesScreenState extends ConsumerState<CourierOfficesScreen> {
   final _radiusController = TextEditingController();
+  final _searchController = TextEditingController();
+  String _searchQuery = '';
   bool _savingRadius = false;
 
   @override
   void dispose() {
     _radiusController.dispose();
+    _searchController.dispose();
     super.dispose();
   }
 
@@ -61,6 +64,36 @@ class _CourierOfficesScreenState extends ConsumerState<CourierOfficesScreen> {
             ),
           ),
 
+          // Search Bar
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+              child: TextField(
+                controller: _searchController,
+                onChanged: (val) {
+                  setState(() {
+                    _searchQuery = val.trim().toLowerCase();
+                  });
+                },
+                decoration: InputDecoration(
+                  hintText: 'Search offices by name, district, or address...',
+                  prefixIcon: const Icon(Icons.search, color: BrandColors.textMuted),
+                  suffixIcon: _searchQuery.isNotEmpty
+                      ? IconButton(
+                          icon: const Icon(Icons.clear),
+                          onPressed: () {
+                            _searchController.clear();
+                            setState(() {
+                              _searchQuery = '';
+                            });
+                          },
+                        )
+                      : null,
+                ),
+              ),
+            ),
+          ),
+
           // Courier Branches List Header
           const SliverToBoxAdapter(
             child: Padding(
@@ -79,25 +112,41 @@ class _CourierOfficesScreenState extends ConsumerState<CourierOfficesScreen> {
           // Offices Content
           officesAsync.when(
             data: (offices) {
-              if (offices.isEmpty) {
-                return const SliverFillRemaining(
+              final filtered = offices.where((office) {
+                final name = (office.name ?? '').toLowerCase();
+                final brand = office.courierName.toLowerCase();
+                final district = (office.district ?? '').toLowerCase();
+                final address = office.fullAddress.toLowerCase();
+                return name.contains(_searchQuery) ||
+                    brand.contains(_searchQuery) ||
+                    district.contains(_searchQuery) ||
+                    address.contains(_searchQuery);
+              }).toList();
+
+              if (filtered.isEmpty) {
+                return SliverFillRemaining(
+                  hasScrollBody: false,
                   child: Center(
                     child: Padding(
-                      padding: EdgeInsets.all(32.0),
+                      padding: const EdgeInsets.all(32.0),
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.storefront_outlined, size: 64, color: BrandColors.textMuted),
-                          SizedBox(height: 16),
+                          const Icon(Icons.storefront_outlined, size: 64, color: BrandColors.textMuted),
+                          const SizedBox(height: 16),
                           Text(
-                            'No Physical Offices Added',
-                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: BrandColors.primary),
+                            _searchQuery.isEmpty
+                                ? 'No Physical Offices Added'
+                                : 'No offices match your search',
+                            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: BrandColors.primary),
                           ),
-                          SizedBox(height: 8),
+                          const SizedBox(height: 8),
                           Text(
-                            'Add drop-off stations where customers can drop parcels off.',
+                            _searchQuery.isEmpty
+                                ? 'Add drop-off stations where customers can drop parcels off.'
+                                : 'Try refinement of your query parameters.',
                             textAlign: TextAlign.center,
-                            style: TextStyle(color: BrandColors.textMuted),
+                            style: const TextStyle(color: BrandColors.textMuted),
                           ),
                         ],
                       ),
@@ -111,14 +160,14 @@ class _CourierOfficesScreenState extends ConsumerState<CourierOfficesScreen> {
                 sliver: SliverList(
                   delegate: SliverChildBuilderDelegate(
                     (context, index) {
-                      final office = offices[index];
+                      final office = filtered[index];
                       return _OfficeCard(
                         office: office,
                         onEdit: () => _showOfficeForm(context, office),
                         onDelete: () => _confirmDelete(context, office),
                       );
                     },
-                    childCount: offices.length,
+                    childCount: filtered.length,
                   ),
                 ),
               );
