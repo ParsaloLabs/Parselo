@@ -144,6 +144,22 @@ class DashboardScreen extends ConsumerWidget {
                   color: BrandColors.accentGreen,
                   onTap: () => context.go('/dashboard/approvals'),
                 ),
+                 const SizedBox(height: 12),
+                _ActionCard(
+                  title: 'Service Areas Manager',
+                  subtitle: 'Define pickup/delivery operational zones and center coordinates',
+                  icon: Icons.map_outlined,
+                  color: Colors.purple,
+                  onTap: () => context.go('/dashboard/service-areas'),
+                ),
+                const SizedBox(height: 12),
+                _ActionCard(
+                  title: 'Courier Offices',
+                  subtitle: 'Configure physical drop-off stations and manage radius gating',
+                  icon: Icons.storefront_outlined,
+                  color: Colors.indigo,
+                  onTap: () => context.go('/dashboard/courier-offices'),
+                ),
                 const SizedBox(height: 12),
                 _ActionCard(
                   title: 'Dispatch & Settings',

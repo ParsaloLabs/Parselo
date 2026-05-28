@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 
 class BrandColors {
-  // Premium Deep Slate Navy (#0E1726)
-  static const Color primary = Color(0xFF0E1726);
-  // Brand Vibrant Orange (#E66E2E)
-  static const Color accentOrange = Color(0xFFE66E2E);
-  // Success Green (#1FA86A)
-  static const Color accentGreen = Color(0xFF1FA86A);
+  // Brand Electric Blue (#0E5BFF)
+  static const Color primary = Color(0xFF0E5BFF);
+  // Secondary Royal Blue (#0944C6)
+  static const Color accentOrange = Color(0xFF0944C6);
+  // Success Emerald Green (#10B981)
+  static const Color accentGreen = Color(0xFF10B981);
   
   static const Color creamBg = Color(0xFFFAF7F2);
   static const Color creamCard = Color(0xFFFFFFFF);

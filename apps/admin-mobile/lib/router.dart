@@ -9,6 +9,8 @@ import 'screens/orders_screen.dart';
 import 'screens/order_detail_screen.dart';
 import 'screens/approvals_screen.dart';
 import 'screens/settings_screen.dart';
+import 'screens/service_areas_screen.dart';
+import 'screens/courier_offices_screen.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   final authState = ref.watch(authStateProvider);
@@ -48,6 +50,14 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: 'settings',
             builder: (context, state) => const SettingsScreen(),
+          ),
+          GoRoute(
+            path: 'service-areas',
+            builder: (context, state) => const ServiceAreasScreen(),
+          ),
+          GoRoute(
+            path: 'courier-offices',
+            builder: (context, state) => const CourierOfficesScreen(),
           ),
         ],
       ),
