@@ -5,6 +5,8 @@ class AdminKpis {
   final int revenueTodayPaise;
   final int failedCount;
   final int refundRequestedCount;
+  final int registeredUsers;
+  final int totalAgents;
 
   AdminKpis({
     required this.ordersToday,
@@ -13,6 +15,8 @@ class AdminKpis {
     required this.revenueTodayPaise,
     required this.failedCount,
     required this.refundRequestedCount,
+    required this.registeredUsers,
+    required this.totalAgents,
   });
 
   factory AdminKpis.fromJson(Map<String, dynamic> json) {
@@ -30,6 +34,8 @@ class AdminKpis {
       revenueTodayPaise: parseInt(json['revenue_today_paise']),
       failedCount: parseInt(json['failed_count']),
       refundRequestedCount: parseInt(json['refund_requested_count']),
+      registeredUsers: parseInt(json['registered_users']),
+      totalAgents: parseInt(json['total_agents']),
     );
   }
 }

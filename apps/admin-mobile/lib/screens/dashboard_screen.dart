@@ -113,6 +113,18 @@ class DashboardScreen extends ConsumerWidget {
                       icon: Icons.replay_outlined,
                       highlight: stats.refundRequestedCount > 0,
                     ),
+                    _KpiCard(
+                      title: "Registered Users",
+                      value: stats.registeredUsers.toString(),
+                      color: Colors.teal,
+                      icon: Icons.supervised_user_circle_outlined,
+                    ),
+                    _KpiCard(
+                      title: "Total Drivers",
+                      value: stats.totalAgents.toString(),
+                      color: Colors.indigo,
+                      icon: Icons.directions_bike_outlined,
+                    ),
                   ],
                 ),
                 

@@ -197,6 +197,7 @@ router.get('/dashboard-stats', requireAuth(['admin']), async (_req, res) => {
   const { rows } = await query<{
     orders_today: number; active_orders: number; agents_online: number;
     revenue_today_paise: number; failed_count: number; refund_requested_count: number;
+    registered_users: number; total_agents: number;
   }>(
     `SELECT
       (SELECT COUNT(*)::int FROM orders WHERE created_at >= ${today}) AS orders_today,
@@ -204,7 +205,9 @@ router.get('/dashboard-stats', requireAuth(['admin']), async (_req, res) => {
       (SELECT COUNT(*)::int FROM agents WHERE is_online = TRUE) AS agents_online,
       (SELECT COALESCE(SUM(total_amount), 0)::int FROM orders WHERE created_at >= ${today} AND payment_status = 'paid') AS revenue_today_paise,
       (SELECT COUNT(*)::int FROM orders WHERE status = 'failed' AND (payment_status IS NULL OR payment_status NOT IN ('refunded','refund_requested'))) AS failed_count,
-      (SELECT COUNT(*)::int FROM orders WHERE payment_status = 'refund_requested') AS refund_requested_count
+      (SELECT COUNT(*)::int FROM orders WHERE payment_status = 'refund_requested') AS refund_requested_count,
+      (SELECT COUNT(*)::int FROM users) AS registered_users,
+      (SELECT COUNT(*)::int FROM agents) AS total_agents
     `,
   );
   res.json(rows[0]);

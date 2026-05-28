@@ -674,7 +674,7 @@ class _OfficeFormSheetState extends ConsumerState<_OfficeFormSheet> {
                     _selectedCourierId = couriers.first.id;
                   }
                   return DropdownButtonFormField<String>(
-                    value: _selectedCourierId,
+                    initialValue: _selectedCourierId,
                     decoration: const InputDecoration(labelText: 'Courier Brand'),
                     items: couriers.map((c) {
                       return DropdownMenuItem<String>(

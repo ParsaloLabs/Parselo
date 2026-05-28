@@ -446,7 +446,7 @@ class _AreaFormSheetState extends ConsumerState<_AreaFormSheet> {
               const SizedBox(height: 20),
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
-                activeColor: BrandColors.accentOrange,
+                activeThumbColor: BrandColors.accentOrange,
                 title: const Text(
                   'Active Zone',
                   style: TextStyle(fontWeight: FontWeight.bold, color: BrandColors.primary),

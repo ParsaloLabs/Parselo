@@ -350,7 +350,7 @@ class CourierOfficesNotifier extends StateNotifier<AsyncValue<List<CourierOffice
   }) async {
     try {
       final payload = {
-        if (id != null) 'id': id,
+        'id': ?id,
         'courier_id': courierId,
         'name': name.trim(),
         'district': district.trim(),
@@ -418,7 +418,7 @@ class ServiceAreasNotifier extends StateNotifier<AsyncValue<List<ServiceArea>>> 
   }) async {
     try {
       final payload = {
-        if (id != null) 'id': id,
+        'id': ?id,
         'name': name.trim(),
         'center_lat': centerLat,
         'center_lng': centerLng,
