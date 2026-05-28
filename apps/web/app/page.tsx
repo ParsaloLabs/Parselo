@@ -1,13 +1,24 @@
 'use client';
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { RecaptchaVerifier, signInWithPhoneNumber, type ConfirmationResult } from 'firebase/auth';
+import { firebaseAuth } from '../lib/firebase';
 import { api, getToken, setToken } from '../lib/api';
 
 const FRIENDLY_ERRORS: Record<string, string> = {
   invalid_phone: 'Enter a valid mobile number (10 digits, with or without +91).',
   invalid_input: 'Please check your input and try again.',
-  otp_invalid_or_expired: 'OTP is incorrect or has expired. Resend a new one.',
+  invalid_id_token: 'Verification expired. Please try again.',
+  firebase_not_configured: 'Sign-in is temporarily unavailable. Contact support.',
+  'auth/invalid-phone-number': 'Enter a valid mobile number.',
+  'auth/too-many-requests': 'Too many attempts. Try again in a few minutes.',
+  'auth/code-expired': 'OTP expired. Request a new one.',
+  'auth/invalid-verification-code': 'OTP is incorrect.',
+  'auth/operation-not-allowed': 'Phone sign-in is not enabled. Contact support.',
+  'auth/billing-not-enabled': 'SMS service is being activated. Please try again shortly.',
+  'auth/captcha-check-failed': 'Verification check failed. Refresh the page and try again.',
+  'auth/quota-exceeded': 'Too many sign-ins right now. Try again in a few minutes.',
 };
 
 function friendly(code: string | null): string | null {
@@ -20,26 +31,45 @@ export default function LandingPage() {
   const [phone, setPhone] = useState('+91');
   const [otp, setOtp] = useState('');
   const [step, setStep] = useState<'phone' | 'otp'>('phone');
-  const [devOtp, setDevOtp] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const confirmationRef = useRef<ConfirmationResult | null>(null);
+  const recaptchaRef = useRef<RecaptchaVerifier | null>(null);
 
   useEffect(() => {
     if (getToken()) router.replace('/home');
   }, [router]);
+
+  useEffect(() => {
+    return () => {
+      try { recaptchaRef.current?.clear(); } catch {}
+      recaptchaRef.current = null;
+    };
+  }, []);
+
+  const resetRecaptcha = () => {
+    try { recaptchaRef.current?.clear(); } catch {}
+    recaptchaRef.current = null;
+    const container = document.getElementById('recaptcha-container');
+    if (container) container.innerHTML = '';
+  };
 
   const sendOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setLoading(true);
     try {
-      const res = await api<{ ok: boolean; dev_otp?: string }>('/auth/send-otp', {
-        method: 'POST', body: { phone }, auth: false,
+      resetRecaptcha();
+      const verifier = new RecaptchaVerifier(firebaseAuth, 'recaptcha-container', {
+        size: 'invisible',
       });
-      setDevOtp(res.dev_otp ?? null);
+      recaptchaRef.current = verifier;
+      const confirmation = await signInWithPhoneNumber(firebaseAuth, phone, verifier);
+      confirmationRef.current = confirmation;
       setStep('otp');
     } catch (e: any) {
-      setError(e.message);
+      setError(e?.code ?? e?.message ?? 'send_failed');
+      resetRecaptcha();
     } finally {
       setLoading(false);
     }
@@ -50,13 +80,16 @@ export default function LandingPage() {
     setError(null);
     setLoading(true);
     try {
-      const res = await api<{ token: string }>('/auth/verify-otp', {
-        method: 'POST', body: { phone, otp }, auth: false,
+      if (!confirmationRef.current) throw new Error('no_confirmation');
+      const cred = await confirmationRef.current.confirm(otp);
+      const idToken = await cred.user.getIdToken();
+      const res = await api<{ token: string }>('/auth/firebase-login', {
+        method: 'POST', body: { id_token: idToken }, auth: false,
       });
       setToken(res.token);
       router.push('/home');
     } catch (e: any) {
-      setError(e.message);
+      setError(e?.code ?? e?.message ?? 'verify_failed');
     } finally {
       setLoading(false);
     }
@@ -121,11 +154,6 @@ export default function LandingPage() {
             </form>
           ) : (
             <form onSubmit={verify}>
-              {devOtp && (
-                <div className="bg-amber-50 border border-amber-200 text-amber-900 text-sm rounded-lg px-3 py-2 mb-3">
-                  Dev mode — use OTP <strong>{devOtp}</strong>
-                </div>
-              )}
               <label className="block text-sm font-medium mb-1">6-digit OTP</label>
               <input
                 type="text" inputMode="numeric" maxLength={6}
@@ -142,13 +170,15 @@ export default function LandingPage() {
                 {loading ? 'Verifying…' : 'Verify & continue'}
               </button>
               <button
-                type="button" onClick={() => { setStep('phone'); setOtp(''); setError(null); }}
+                type="button" onClick={() => { setStep('phone'); setOtp(''); setError(null); confirmationRef.current = null; }}
                 className="w-full text-sm text-slate-500 mt-3 hover:text-slate-900"
               >
                 Use a different number
               </button>
             </form>
           )}
+
+          <div id="recaptcha-container" />
         </div>
       </main>
 
