@@ -1,0 +1,33 @@
+name: parsalo_admin
+description: "Parsalo operations administrator mobile dashboard."
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.12.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+
+  # Networking & REST API Queries
+  dio: ^5.7.0
+
+  # State management & routing
+  flutter_riverpod: ^2.6.1
+  go_router: ^14.6.2
+
+  # Secure token storage
+  flutter_secure_storage: ^9.2.2
+
+  # Utilities
+  intl: ^0.20.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
