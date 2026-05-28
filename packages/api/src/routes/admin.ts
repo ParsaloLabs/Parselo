@@ -23,7 +23,7 @@ router.get('/orders', requireAuth(['admin']), async (req, res) => {
   let where = '';
   if (status) {
     params.push(status);
-    where = `WHERE status = $${params.length}`;
+    where = `WHERE o.status = $${params.length}`;
   }
   params.push(limit);
   const { rows } = await query(
