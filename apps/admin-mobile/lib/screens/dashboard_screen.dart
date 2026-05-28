@@ -5,11 +5,18 @@ import 'package:go_router/go_router.dart';
 import '../core/theme.dart';
 import '../state/providers.dart';
 
-class DashboardScreen extends ConsumerWidget {
+class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<DashboardScreen> createState() => _DashboardScreenState();
+}
+
+class _DashboardScreenState extends ConsumerState<DashboardScreen> {
+  bool _showAllKpis = false;
+
+  @override
+  Widget build(BuildContext context) {
     final statsStream = ref.watch(dashboardStatsProvider);
 
     return Scaffold(
@@ -99,36 +106,58 @@ class DashboardScreen extends ConsumerWidget {
                       color: Colors.purple,
                       icon: Icons.people_outline,
                     ),
-                    _KpiCard(
-                      title: "Failed Jobs",
-                      value: stats.failedCount.toString(),
-                      color: Colors.red,
-                      icon: Icons.error_outline_outlined,
-                      highlight: stats.failedCount > 0,
-                    ),
-                    _KpiCard(
-                      title: "Refund Requests",
-                      value: stats.refundRequestedCount.toString(),
-                      color: Colors.amber.shade700,
-                      icon: Icons.replay_outlined,
-                      highlight: stats.refundRequestedCount > 0,
-                    ),
-                    _KpiCard(
-                      title: "Registered Users",
-                      value: stats.registeredUsers.toString(),
-                      color: Colors.teal,
-                      icon: Icons.supervised_user_circle_outlined,
-                    ),
-                    _KpiCard(
-                      title: "Total Drivers",
-                      value: stats.totalAgents.toString(),
-                      color: Colors.indigo,
-                      icon: Icons.directions_bike_outlined,
-                    ),
+                    if (_showAllKpis) ...[
+                      _KpiCard(
+                        title: "Failed Jobs",
+                        value: stats.failedCount.toString(),
+                        color: Colors.red,
+                        icon: Icons.error_outline_outlined,
+                        highlight: stats.failedCount > 0,
+                      ),
+                      _KpiCard(
+                        title: "Refund Requests",
+                        value: stats.refundRequestedCount.toString(),
+                        color: Colors.amber.shade700,
+                        icon: Icons.replay_outlined,
+                        highlight: stats.refundRequestedCount > 0,
+                      ),
+                      _KpiCard(
+                        title: "Registered Users",
+                        value: stats.registeredUsers.toString(),
+                        color: Colors.teal,
+                        icon: Icons.supervised_user_circle_outlined,
+                      ),
+                      _KpiCard(
+                        title: "Total Drivers",
+                        value: stats.totalAgents.toString(),
+                        color: Colors.indigo,
+                        icon: Icons.directions_bike_outlined,
+                      ),
+                    ],
                   ],
                 ),
                 
-                const SizedBox(height: 32),
+                const SizedBox(height: 12),
+                Center(
+                  child: TextButton.icon(
+                    onPressed: () => setState(() => _showAllKpis = !_showAllKpis),
+                    icon: Icon(
+                      _showAllKpis ? Icons.expand_less_outlined : Icons.expand_more_outlined,
+                      color: BrandColors.primary,
+                      size: 20,
+                    ),
+                    label: Text(
+                      _showAllKpis ? 'Show Less Analytics' : 'View More Analytics',
+                      style: const TextStyle(
+                        color: BrandColors.primary,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ),
+                ),
+                
+                const SizedBox(height: 24),
                 
                 const Text(
                   'Quick Actions',
