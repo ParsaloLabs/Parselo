@@ -3,17 +3,18 @@ import 'package:flutter/material.dart';
 class BrandColors {
   // Brand Electric Blue (#0E5BFF)
   static const Color primary = Color(0xFF0E5BFF);
-  // Secondary Royal Blue (#0944C6)
-  static const Color accentOrange = Color(0xFF0944C6);
+  // Secondary Royal Blue (#0043D0)
+  static const Color accentOrange = Color(0xFF0043D0);
   // Success Emerald Green (#10B981)
   static const Color accentGreen = Color(0xFF10B981);
   
-  static const Color creamBg = Color(0xFFFAF7F2);
-  static const Color creamCard = Color(0xFFFFFFFF);
-  static const Color creamBorder = Color(0xFFE2DCD0);
+  // Slate/White theme aligned with agent/customer apps
+  static const Color creamBg = Color(0xFFF8FAFC); // Clean white/slate background
+  static const Color creamCard = Color(0xFFFFFFFF); // White card surface
+  static const Color creamBorder = Color(0xFFE2E8F0); // Slate 200 border
   
-  static const Color textMain = Color(0xFF0E1726);
-  static const Color textMuted = Color(0xFF64748B);
+  static const Color textMain = Color(0xFF0F172A); // Slate 900 main text
+  static const Color textMuted = Color(0xFF475569); // Slate 600 secondary text
 }
 
 ThemeData buildTheme() {
