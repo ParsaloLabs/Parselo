@@ -198,18 +198,18 @@ class _CourierOfficesScreenState extends ConsumerState<CourierOfficesScreen> {
                 ),
                 Switch(
                   value: gate.enabled,
-                  activeColor: BrandColors.accentOrange,
                   onChanged: (val) async {
+                    final messenger = ScaffoldMessenger.of(context);
                     try {
                       await ref.read(radiusGateProvider.notifier).toggleRadius(val);
                       if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
+                        messenger.showSnackBar(
                           SnackBar(content: Text(val ? 'Radius gate enabled.' : 'Radius gate disabled.')),
                         );
                       }
                     } catch (e) {
                       if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
+                        messenger.showSnackBar(
                           SnackBar(content: Text('Failed to update toggle: $e'), backgroundColor: Colors.red),
                         );
                       }
@@ -315,6 +315,7 @@ class _CourierOfficesScreenState extends ConsumerState<CourierOfficesScreen> {
   }
 
   Future<void> _confirmDelete(BuildContext context, CourierOffice office) async {
+    final messenger = ScaffoldMessenger.of(context);
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -337,13 +338,13 @@ class _CourierOfficesScreenState extends ConsumerState<CourierOfficesScreen> {
       try {
         await ref.read(courierOfficesProvider.notifier).deleteOffice(office.id);
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
+          messenger.showSnackBar(
             const SnackBar(content: Text('Courier physical office deleted.')),
           );
         }
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
+          messenger.showSnackBar(
             SnackBar(content: Text('Failed to delete office: $e'), backgroundColor: Colors.red),
           );
         }
