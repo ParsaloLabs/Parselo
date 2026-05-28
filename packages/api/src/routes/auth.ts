@@ -6,6 +6,7 @@ import { query } from '../db';
 import { sendOtpSms } from '../sms';
 import { signAdminToken, signAgentToken, signUserToken } from '../auth';
 import { env } from '../env';
+import { getFirebaseApp } from '../firebase';
 
 const router = Router();
 
@@ -34,6 +35,41 @@ router.post('/send-otp', sendOtpLimiter, async (req, res) => {
   await sendOtpSms(phone, code);
 
   return res.json({ ok: true, dev_otp: env.OTP_DEV_MODE ? code : undefined });
+});
+
+const firebaseLoginLimiter = rateLimit({
+  windowMs: 5 * 60 * 1000,
+  limit: 10,
+  message: { error: 'rate_limited' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+router.post('/firebase-login', firebaseLoginLimiter, async (req, res) => {
+  const parsed = z.object({ id_token: z.string().min(20) }).safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: 'invalid_input' });
+
+  const app = getFirebaseApp();
+  if (!app) return res.status(500).json({ error: 'firebase_not_configured' });
+
+  let decoded;
+  try {
+    decoded = await app.auth().verifyIdToken(parsed.data.id_token);
+  } catch {
+    return res.status(401).json({ error: 'invalid_id_token' });
+  }
+
+  const phone = decoded.phone_number;
+  if (!phone) return res.status(400).json({ error: 'no_phone_in_token' });
+
+  const { rows } = await query<{ id: string }>(
+    `INSERT INTO users (phone, is_verified) VALUES ($1, TRUE)
+       ON CONFLICT (phone) DO UPDATE SET is_verified = TRUE
+       RETURNING id`,
+    [phone],
+  );
+  const userId = rows[0].id;
+  return res.json({ token: signUserToken(userId), user_id: userId });
 });
 
 router.post('/verify-otp', async (req, res) => {

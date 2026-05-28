@@ -1,42 +1,10 @@
-import { readFileSync } from 'node:fs';
 import admin from 'firebase-admin';
-import { env } from './env';
+import { getFirebaseApp } from './firebase';
 import { query } from './db';
 
-// Lazy init so the API still boots in dev without Firebase configured.
-// In that mode every send falls back to a stdout log so the flow is visible.
-let initAttempted = false;
-let messaging: admin.messaging.Messaging | null = null;
-
 function getMessaging(): admin.messaging.Messaging | null {
-  if (initAttempted) return messaging;
-  initAttempted = true;
-
-  let credentialJson: string | null = null;
-  if (env.FIREBASE_SERVICE_ACCOUNT_JSON) {
-    credentialJson = env.FIREBASE_SERVICE_ACCOUNT_JSON;
-  } else if (env.FIREBASE_SERVICE_ACCOUNT_PATH) {
-    try {
-      credentialJson = readFileSync(env.FIREBASE_SERVICE_ACCOUNT_PATH, 'utf-8');
-    } catch (e) {
-      console.warn('[push] failed to read service account file', e);
-      return null;
-    }
-  } else {
-    console.log('[push:dev] no Firebase credentials — pushes will be logged to stdout');
-    return null;
-  }
-
-  try {
-    const parsed = JSON.parse(credentialJson);
-    admin.initializeApp({ credential: admin.credential.cert(parsed) });
-    messaging = admin.messaging();
-    console.log('[push] firebase-admin initialised');
-    return messaging;
-  } catch (e) {
-    console.warn('[push] failed to init firebase-admin', e);
-    return null;
-  }
+  const app = getFirebaseApp();
+  return app ? app.messaging() : null;
 }
 
 export type PushPayload = {
